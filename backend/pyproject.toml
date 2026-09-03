@@ -45,8 +45,8 @@ strict = true
 asyncio_mode = "auto"
 testpaths = ["tests"]
 markers = [
-    "integration: requires a real, live PostgreSQL database - never runs against SQLite/mocks. "
-    "Excluded from a normal run with `-m \"not integration\"`; run for real with `-m integration` "
-    "once a disposable database is available. Not skipped unconditionally - a run that doesn't "
-    "explicitly filter these out will show them as failing/erroring, not silently absent.",
+    """integration: requires a real, live PostgreSQL database - never runs against SQLite/mocks. \
+    Excluded from a normal run with `-m "not integration"`; run for real with `-m integration` \
+    once a disposable database is available. Not skipped unconditionally - a run that doesn't \
+    explicitly filter these out will show them as failing/erroring, not silently absent.""",
 ]
