@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: procureiq
+          POSTGRES_PASSWORD: procureiq
+          POSTGRES_DB: procureiq_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e "backend[dev]"
+      - run: cd backend && ruff check .
+      - run: cd backend && mypy app
+      - run: cd backend && alembic upgrade head
+        env:
+          DATABASE_URL: postgresql+asyncpg://procureiq:procureiq@localhost:5432/procureiq_test
+          DATABASE_URL_SYNC: postgresql+psycopg://procureiq:procureiq@localhost:5432/procureiq_test
+          SECRET_KEY: ci-secret-key
+          DATABASE_URL_APP: postgresql+asyncpg://procureiq_app:procureiq_app_dev_only_rotate_in_production@localhost:5432/procureiq_test
+      - run: cd backend && pytest -v
+        env:
+          DATABASE_URL: postgresql+asyncpg://procureiq:procureiq@localhost:5432/procureiq_test
+          DATABASE_URL_SYNC: postgresql+psycopg://procureiq:procureiq@localhost:5432/procureiq_test
+          SECRET_KEY: ci-secret-key
+          DATABASE_URL_APP: postgresql+asyncpg://procureiq_app:procureiq_app_dev_only_rotate_in_production@localhost:5432/procureiq_test
+
+  migration-compatibility:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: procureiq
+          POSTGRES_PASSWORD: procureiq
+          POSTGRES_DB: procureiq_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e "backend[dev]"
+      - run: cd backend && alembic upgrade 0020
+        env:
+          DATABASE_URL_SYNC: postgresql+psycopg://procureiq:procureiq@localhost:5432/procureiq_test
+          SECRET_KEY: ci-secret-key
+          DATABASE_URL_APP: postgresql+asyncpg://procureiq_app:procureiq_app_dev_only_rotate_in_production@localhost:5432/procureiq_test
+      - run: cd backend && python scripts/verify_0020_to_0021_migration_compatibility.py
+        env:
+          DATABASE_URL: postgresql+asyncpg://procureiq:procureiq@localhost:5432/procureiq_test
+          DATABASE_URL_SYNC: postgresql+psycopg://procureiq:procureiq@localhost:5432/procureiq_test
+          SECRET_KEY: ci-secret-key
+          DATABASE_URL_APP: postgresql+asyncpg://procureiq_app:procureiq_app_dev_only_rotate_in_production@localhost:5432/procureiq_test
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: cd frontend && npm install
+      - run: cd frontend && npm run lint
+      - run: cd frontend && npm run build
