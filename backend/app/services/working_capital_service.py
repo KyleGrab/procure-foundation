@@ -24,7 +24,10 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.analytics.management_accounting import calculate_working_capital_metrics, classify_aging_buckets
+from app.analytics.management_accounting import (
+    calculate_working_capital_metrics,
+    classify_aging_buckets,
+)
 from app.core.exceptions import ConflictError, ValidationFailedError
 from app.db.models import AgingLedgerSnapshot, WorkingCapitalSnapshot
 from app.services import audit_service

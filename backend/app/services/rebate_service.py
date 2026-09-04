@@ -8,7 +8,7 @@ DB-dependent, syntax-checked only in this sandbox, same pattern as every service
 """
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from sqlalchemy import func, select
@@ -26,7 +26,13 @@ from app.analytics.rebate_calculations import (
     is_threshold_alert_due,
 )
 from app.core.exceptions import ConflictError, NotFoundError
-from app.db.models import FinancialAmountStatusEvent, RebateAgreement, RebateAlert, RebatePeriodActual, Supplier
+from app.db.models import (
+    FinancialAmountStatusEvent,
+    RebateAgreement,
+    RebateAlert,
+    RebatePeriodActual,
+    Supplier,
+)
 from app.schemas.rebate import RebateAgreementCreate, RebatePeriodActualCreate, RebateReceiptRecord
 from app.services import audit_service
 
@@ -67,7 +73,7 @@ async def _write_expected_amount_event(
         old_approved_at=locked.expected_amount_approved_at, new_approved_at=new_approved_at,
         old_approved_by_user_id=locked.expected_amount_approved_by_user_id,
         new_approved_by_user_id=new_approved_by_user_id,
-        actor_user_id=actor_user_id, occurred_at=datetime.now(timezone.utc),
+        actor_user_id=actor_user_id, occurred_at=datetime.now(UTC),
         change_reference=change_reference, change_reason_code=change_reason_code,
     )
     db.add(event)
@@ -157,10 +163,10 @@ async def recalculate_expected(
     else:
         await _write_expected_amount_event(
             db, period_actual=period_actual, new_amount=new_amount, new_status="calculated",
-            new_source_basis="contract_terms_calculation", new_calculated_at=datetime.now(timezone.utc),
+            new_source_basis="contract_terms_calculation", new_calculated_at=datetime.now(UTC),
             actor_user_id=actor_user_id, change_reference=change_reference, change_reason_code=change_reason_code,
         )
-    period_actual.status_calculated_at = datetime.now(timezone.utc)
+    period_actual.status_calculated_at = datetime.now(UTC)
 
 
 async def record_period_actual(
@@ -254,7 +260,7 @@ async def close_period(
         raise ConflictError("Period has already been closed")
 
     period_actual.earned_amount = period_actual.expected_amount
-    period_actual.earned_at = datetime.now(timezone.utc)
+    period_actual.earned_at = datetime.now(UTC)
     _refresh_status(period_actual, today=today, period_closed=True)
 
     await audit_service.record(
@@ -308,7 +314,7 @@ def _refresh_status(period_actual: RebatePeriodActual, *, today: date, period_cl
     # entirely (leave status unchanged) when the evidence status can't support it, rather than
     # silently treating "unknown" as "expected nothing."
     if period_actual.expected_amount_status in ("unknown", "legacy_unverified"):
-        period_actual.status_calculated_at = datetime.now(timezone.utc)
+        period_actual.status_calculated_at = datetime.now(UTC)
         return
     threshold_alert_due = False  # recomputed by check_threshold_alert, not duplicated here
     period_actual.status = classify_rebate_status(
@@ -316,7 +322,7 @@ def _refresh_status(period_actual: RebatePeriodActual, *, today: date, period_cl
         Decimal(str(period_actual.received_amount)) if period_actual.received_amount is not None else None,
         period_closed=period_closed, threshold_alert_due=threshold_alert_due,
     ).value
-    period_actual.status_calculated_at = datetime.now(timezone.utc)
+    period_actual.status_calculated_at = datetime.now(UTC)
 
 
 def get_derived_progress(agreement: RebateAgreement, period_actual: RebatePeriodActual) -> dict:

@@ -7,15 +7,25 @@ from __future__ import annotations
 
 import hashlib
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.constants import MembershipStatus, Role
-from app.core.exceptions import AuthenticationError, ConflictError, PermissionDeniedError, RegistrationDisabledError
-from app.core.security import create_access_token, create_refresh_token, hash_password, verify_password
+from app.core.exceptions import (
+    AuthenticationError,
+    ConflictError,
+    PermissionDeniedError,
+    RegistrationDisabledError,
+)
+from app.core.security import (
+    create_access_token,
+    create_refresh_token,
+    hash_password,
+    verify_password,
+)
 from app.db.models import Organisation, OrganisationMembership, RefreshToken, User
 from app.schemas.auth import LoginRequest, RegisterRequest, TokenPair
 from app.services import audit_service
@@ -88,7 +98,7 @@ async def login(db: AsyncSession, payload: LoginRequest) -> TokenPair:
     if membership is None:
         raise AuthenticationError("No active organisation membership for this user")
 
-    user.last_login_at = datetime.now(timezone.utc)
+    user.last_login_at = datetime.now(UTC)
 
     tokens = await _issue_tokens(
         db, user_id=user.id, organisation_id=membership.organisation_id, role=membership.role
@@ -145,7 +155,7 @@ async def _issue_tokens(db: AsyncSession, *, user_id: int, organisation_id: int,
             user_id=user_id,
             family_id=family_id,
             token_hash=_hash_token(refresh_token),
-            expires_at=datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_expire_days),
+            expires_at=datetime.now(UTC) + timedelta(days=settings.refresh_token_expire_days),
         )
     )
     return TokenPair(access_token=access_token, refresh_token=refresh_token)

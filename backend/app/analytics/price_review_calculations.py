@@ -63,7 +63,7 @@ def calculate_annualized_quantity(
     isn't an estimate."""
     if months_observed <= 0:
         raise ValueError("months_observed must be positive")
-    annualized = observed_quantity * (Decimal("12") / months_observed)
+    annualized = observed_quantity * (Decimal(12) / months_observed)
     if months_observed >= 12:
         confidence = "high"
     elif months_observed >= 6:
@@ -120,7 +120,7 @@ def calculate_gross_margin(selling_price: Decimal, cost: Decimal) -> tuple[Decim
 def calculate_required_selling_price(cost: Decimal, target_margin_pct: Decimal) -> Decimal:
     if target_margin_pct >= 1:
         raise ValueError("target_margin_pct must be less than 1 (e.g. 0.30 for 30%)")
-    return round_currency(cost / (Decimal("1") - target_margin_pct))
+    return round_currency(cost / (Decimal(1) - target_margin_pct))
 
 
 def calculate_potential_cost_avoidance(

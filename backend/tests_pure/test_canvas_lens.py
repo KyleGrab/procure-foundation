@@ -24,14 +24,14 @@ from app.analytics.canvas_lens import (
 class TestProcurementLensGraph(unittest.TestCase):
     def _suppliers(self):
         return [
-            SupplierSpendInput(id=1, public_id="sup-a", name="Cape Valley Foods", category="Fresh Produce", total_spend=Decimal("500000")),
-            SupplierSpendInput(id=2, public_id="sup-b", name="Karoo Dry Goods", category="Fresh Produce", total_spend=Decimal("200000")),
-            SupplierSpendInput(id=3, public_id="sup-c", name="Southern Packaging", category="Packaging", total_spend=Decimal("100000")),
+            SupplierSpendInput(id=1, public_id="sup-a", name="Cape Valley Foods", category="Fresh Produce", total_spend=Decimal(500000)),
+            SupplierSpendInput(id=2, public_id="sup-b", name="Karoo Dry Goods", category="Fresh Produce", total_spend=Decimal(200000)),
+            SupplierSpendInput(id=3, public_id="sup-c", name="Southern Packaging", category="Packaging", total_spend=Decimal(100000)),
         ]
 
     def test_suppliers_connect_to_their_category_node(self):
         graph = build_procurement_lens_graph(
-            self._suppliers(), aggregate_leakage=Decimal("0"), contract_renewals=[],
+            self._suppliers(), aggregate_leakage=Decimal(0), contract_renewals=[],
         )
         category_node_ids = {n.id for n in graph.nodes if n.node_type == "category"}
         self.assertEqual(category_node_ids, {"category:Fresh Produce", "category:Packaging"})
@@ -41,28 +41,28 @@ class TestProcurementLensGraph(unittest.TestCase):
 
     def test_category_metric_is_sum_of_its_suppliers_spend(self):
         graph = build_procurement_lens_graph(
-            self._suppliers(), aggregate_leakage=Decimal("0"), contract_renewals=[],
+            self._suppliers(), aggregate_leakage=Decimal(0), contract_renewals=[],
         )
         fresh_produce = next(n for n in graph.nodes if n.id == "category:Fresh Produce")
-        self.assertEqual(fresh_produce.metric_value, Decimal("700000"))  # 500000 + 200000
+        self.assertEqual(fresh_produce.metric_value, Decimal(700000))  # 500000 + 200000
 
     def test_suppliers_with_no_category_are_bucketed_not_dropped(self):
-        suppliers = [SupplierSpendInput(id=1, public_id="sup-a", name="Uncategorised Co", category=None, total_spend=Decimal("1000"))]
-        graph = build_procurement_lens_graph(suppliers, aggregate_leakage=Decimal("0"), contract_renewals=[])
+        suppliers = [SupplierSpendInput(id=1, public_id="sup-a", name="Uncategorised Co", category=None, total_spend=Decimal(1000))]
+        graph = build_procurement_lens_graph(suppliers, aggregate_leakage=Decimal(0), contract_renewals=[])
         self.assertIn("category:Uncategorised", {n.id for n in graph.nodes})
 
     def test_leakage_node_status_is_critical_when_positive(self):
-        graph = build_procurement_lens_graph(self._suppliers(), aggregate_leakage=Decimal("15000"), contract_renewals=[])
+        graph = build_procurement_lens_graph(self._suppliers(), aggregate_leakage=Decimal(15000), contract_renewals=[])
         leakage_node = next(n for n in graph.nodes if n.node_type == "rebate_leakage")
         self.assertEqual(leakage_node.status, NodeStatus.CRITICAL)
 
     def test_leakage_node_status_is_positive_when_zero(self):
-        graph = build_procurement_lens_graph(self._suppliers(), aggregate_leakage=Decimal("0"), contract_renewals=[])
+        graph = build_procurement_lens_graph(self._suppliers(), aggregate_leakage=Decimal(0), contract_renewals=[])
         leakage_node = next(n for n in graph.nodes if n.node_type == "rebate_leakage")
         self.assertEqual(leakage_node.status, NodeStatus.POSITIVE)
 
     def test_every_category_node_connects_to_the_single_leakage_node(self):
-        graph = build_procurement_lens_graph(self._suppliers(), aggregate_leakage=Decimal("5000"), contract_renewals=[])
+        graph = build_procurement_lens_graph(self._suppliers(), aggregate_leakage=Decimal(5000), contract_renewals=[])
         leakage_edges = [e for e in graph.edges if e.target_id == "rebate_leakage"]
         self.assertEqual(len(leakage_edges), 2)  # one per category node (Fresh Produce, Packaging)
 
@@ -71,12 +71,12 @@ class TestProcurementLensGraph(unittest.TestCase):
             contract_public_id="con-1", supplier_id=1, title="Cape Valley annual supply agreement",
             expiry_date=date(2026, 3, 1), status="expiring_soon",
         )]
-        graph = build_procurement_lens_graph(self._suppliers(), aggregate_leakage=Decimal("0"), contract_renewals=renewals)
+        graph = build_procurement_lens_graph(self._suppliers(), aggregate_leakage=Decimal(0), contract_renewals=renewals)
         renewal_edges = [e for e in graph.edges if e.source_id == "sup-a" and "contract:" in e.target_id]
         self.assertEqual(len(renewal_edges), 1)
 
     def test_empty_suppliers_gives_empty_graph_not_error(self):
-        graph = build_procurement_lens_graph([], aggregate_leakage=Decimal("0"), contract_renewals=[])
+        graph = build_procurement_lens_graph([], aggregate_leakage=Decimal(0), contract_renewals=[])
         self.assertEqual(graph.nodes, [])
         self.assertEqual(graph.edges, [])
 
@@ -135,9 +135,9 @@ class TestInventoryLensGraph(unittest.TestCase):
 class TestManagementLensGraph(unittest.TestCase):
     def _summary(self, **overrides):
         defaults = dict(
-            gross_revenue=Decimal("1000000"), cogs=Decimal("650000"),
-            warehouse_abc_cost=Decimal("40000"), logistics_cost=Decimal("60000"),
-            net_margin=Decimal("250000"),
+            gross_revenue=Decimal(1000000), cogs=Decimal(650000),
+            warehouse_abc_cost=Decimal(40000), logistics_cost=Decimal(60000),
+            net_margin=Decimal(250000),
             dso=Decimal("50.0"), dio=Decimal("57.1"), dpo=Decimal("42.9"), ccc=Decimal("64.2"),
             dso_variance=Decimal("2.0"), dio_variance=Decimal("-1.5"), dpo_variance=Decimal("0.5"),
         )
@@ -165,7 +165,7 @@ class TestManagementLensGraph(unittest.TestCase):
         self.assertEqual(dso_node.details["variance_vs_prior"], "2.0")
 
     def test_negative_net_margin_makes_profitability_node_critical(self):
-        graph = build_management_lens_graph(self._summary(net_margin=Decimal("-5000")))
+        graph = build_management_lens_graph(self._summary(net_margin=Decimal(-5000)))
         node = next(n for n in graph.nodes if n.id == "net_profitability")
         self.assertEqual(node.status, NodeStatus.CRITICAL)
 

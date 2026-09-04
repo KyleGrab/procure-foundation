@@ -50,23 +50,23 @@ class TestValidateSnapshotGrain(unittest.TestCase):
 class TestDaysSinceLastMovement(unittest.TestCase):
     def test_single_snapshot_returns_none(self):
         self.assertIsNone(
-            calculate_days_since_last_movement([(date(2026, 1, 1), Decimal("100"))], as_of=date(2026, 2, 1))
+            calculate_days_since_last_movement([(date(2026, 1, 1), Decimal(100))], as_of=date(2026, 2, 1))
         )
 
     def test_flat_quantity_returns_days_since_earliest_snapshot(self):
         # No decrease anywhere in the series - "no confirmed movement for at least this long".
         snapshots = [
-            (date(2026, 1, 1), Decimal("100")),
-            (date(2026, 1, 15), Decimal("100")),
-            (date(2026, 2, 1), Decimal("100")),
+            (date(2026, 1, 1), Decimal(100)),
+            (date(2026, 1, 15), Decimal(100)),
+            (date(2026, 2, 1), Decimal(100)),
         ]
         result = calculate_days_since_last_movement(snapshots, as_of=date(2026, 2, 1))
         self.assertEqual(result, 31)  # Jan 1 -> Feb 1
 
     def test_decrease_is_movement_measured_from_the_decrease_date(self):
         snapshots = [
-            (date(2026, 1, 1), Decimal("100")),
-            (date(2026, 1, 10), Decimal("80")),  # decrease - movement here
+            (date(2026, 1, 1), Decimal(100)),
+            (date(2026, 1, 10), Decimal(80)),  # decrease - movement here
         ]
         result = calculate_days_since_last_movement(snapshots, as_of=date(2026, 1, 20))
         self.assertEqual(result, 10)  # Jan 10 -> Jan 20
@@ -76,9 +76,9 @@ class TestDaysSinceLastMovement(unittest.TestCase):
         # decrease must NOT reset the "since" measurement to the restock date - only a decrease
         # counts as movement.
         snapshots = [
-            (date(2026, 1, 1), Decimal("100")),
-            (date(2026, 1, 10), Decimal("80")),   # decrease - the real, most recent movement
-            (date(2026, 1, 25), Decimal("150")),  # restock - not movement
+            (date(2026, 1, 1), Decimal(100)),
+            (date(2026, 1, 10), Decimal(80)),   # decrease - the real, most recent movement
+            (date(2026, 1, 25), Decimal(150)),  # restock - not movement
         ]
         result = calculate_days_since_last_movement(snapshots, as_of=date(2026, 2, 1))
         self.assertEqual(result, 22)  # Jan 10 -> Feb 1, NOT Jan 25 -> Feb 1
@@ -87,23 +87,23 @@ class TestDaysSinceLastMovement(unittest.TestCase):
 class TestExcessStockValue(unittest.TestCase):
     def test_calculates_correctly_when_both_inputs_present(self):
         result = calculate_excess_stock_value(
-            quantity_on_hand=Decimal("500"), reorder_level=Decimal("200"), unit_cost=Decimal("15"),
+            quantity_on_hand=Decimal(500), reorder_level=Decimal(200), unit_cost=Decimal(15),
         )
         self.assertEqual(result, Decimal("4500.0000"))  # (500-200)*15
 
     def test_none_when_reorder_level_missing(self):
         self.assertIsNone(
-            calculate_excess_stock_value(quantity_on_hand=Decimal("500"), reorder_level=None, unit_cost=Decimal("15"))
+            calculate_excess_stock_value(quantity_on_hand=Decimal(500), reorder_level=None, unit_cost=Decimal(15))
         )
 
     def test_none_when_unit_cost_missing(self):
         self.assertIsNone(
-            calculate_excess_stock_value(quantity_on_hand=Decimal("500"), reorder_level=Decimal("200"), unit_cost=None)
+            calculate_excess_stock_value(quantity_on_hand=Decimal(500), reorder_level=Decimal(200), unit_cost=None)
         )
 
     def test_quantity_below_reorder_level_gives_zero_not_negative(self):
         result = calculate_excess_stock_value(
-            quantity_on_hand=Decimal("50"), reorder_level=Decimal("200"), unit_cost=Decimal("15"),
+            quantity_on_hand=Decimal(50), reorder_level=Decimal(200), unit_cost=Decimal(15),
         )
         self.assertEqual(result, Decimal("0.0000"))
 

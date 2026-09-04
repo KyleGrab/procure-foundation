@@ -4,8 +4,16 @@ import uuid
 from datetime import date, datetime
 
 from sqlalchemy import (
-    BigInteger, CheckConstraint, Date, DateTime, ForeignKey, ForeignKeyConstraint,
-    Index, Numeric, String, UniqueConstraint,
+    BigInteger,
+    CheckConstraint,
+    Date,
+    DateTime,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Index,
+    Numeric,
+    String,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column

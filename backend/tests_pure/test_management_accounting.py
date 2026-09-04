@@ -19,7 +19,10 @@ from app.analytics.management_accounting import (
     determine_allocation_level,
     resolve_trade_spend_for_period,
 )
-from app.analytics.rebate_calculations import calculate_aggregate_rebate_leakage, calculate_rebate_leakage
+from app.analytics.rebate_calculations import (
+    calculate_aggregate_rebate_leakage,
+    calculate_rebate_leakage,
+)
 
 
 class TestAllocationLevelFallback(unittest.TestCase):
@@ -56,24 +59,24 @@ class TestAllocationLevelFallback(unittest.TestCase):
 
 class TestAllocateActivityCost(unittest.TestCase):
     def test_per_km_rate(self):
-        result = allocate_activity_cost(Decimal("5000"), Decimal("250"), "per_km")
+        result = allocate_activity_cost(Decimal(5000), Decimal(250), "per_km")
         self.assertEqual(result, Decimal("20.0000"))
 
     def test_per_pallet_rate(self):
-        result = allocate_activity_cost(Decimal("3000"), Decimal("120"), "per_pallet")
+        result = allocate_activity_cost(Decimal(3000), Decimal(120), "per_pallet")
         self.assertEqual(result, Decimal("25.0000"))
 
     def test_zero_activity_volume_returns_none_not_zero_or_error(self):
         # An allocation rate is undefined at zero volume, not zero - same §3.2 discipline as
         # every other zero-denominator case in this codebase.
-        result = allocate_activity_cost(Decimal("5000"), Decimal("0"), "per_km")
+        result = allocate_activity_cost(Decimal(5000), Decimal(0), "per_km")
         self.assertIsNone(result)
 
     def test_unrecognized_allocation_type_raises(self):
         # §2.4/§5.2: an unrecognized type string is a caller bug or a typo - raise clearly,
         # don't silently accept an arbitrary string as if it were a real allocation basis.
         with self.assertRaises(ValueError):
-            allocate_activity_cost(Decimal("5000"), Decimal("250"), "per_banana")
+            allocate_activity_cost(Decimal(5000), Decimal(250), "per_banana")
 
 
 class TestResolveTradeSpendForPeriod(unittest.TestCase):
@@ -92,7 +95,7 @@ class TestResolveTradeSpendForPeriod(unittest.TestCase):
         # A customer with no sell-side agreement at all genuinely has zero trade spend - this is
         # not a missing-data problem, it's a correct, real answer.
         value = resolve_trade_spend_for_period(trade_spend_record=None, agreement_exists=False)
-        self.assertEqual(value, Decimal("0"))
+        self.assertEqual(value, Decimal(0))
 
     def test_agreement_exists_and_period_figure_is_sourced_returns_the_real_value(self):
         value = resolve_trade_spend_for_period(trade_spend_record=Decimal("245913.07"), agreement_exists=True)
@@ -110,8 +113,8 @@ class TestResolveTradeSpendForPeriod(unittest.TestCase):
     def test_zero_is_a_valid_sourced_figure_not_treated_as_unsourced(self):
         # A real, confirmed R0.00 trade spend for the period (e.g. a threshold not yet reached)
         # must not be conflated with "not sourced" - Decimal("0") is a legitimate sourced value.
-        value = resolve_trade_spend_for_period(trade_spend_record=Decimal("0"), agreement_exists=True)
-        self.assertEqual(value, Decimal("0"))
+        value = resolve_trade_spend_for_period(trade_spend_record=Decimal(0), agreement_exists=True)
+        self.assertEqual(value, Decimal(0))
 
 
 class TestRebateSymmetryAdversarialInputs(unittest.TestCase):
@@ -127,20 +130,20 @@ class TestRebateSymmetryAdversarialInputs(unittest.TestCase):
     def test_over_recovery_produces_negative_leakage_by_design_not_a_bug(self):
         # Confirms existing, already-documented behavior rather than assuming it - received
         # exceeding expected is a real correction/over-payment, not floored to zero.
-        leakage = calculate_rebate_leakage(Decimal("500000"), Decimal("550000"))
+        leakage = calculate_rebate_leakage(Decimal(500000), Decimal(550000))
         self.assertEqual(leakage, Decimal("-50000.0000"))
 
     def test_negative_expected_amount_is_arithmetically_safe_not_a_sign_inversion(self):
         # [DEMO] adversarial input: a negative expected_amount (e.g. a data-entry error, or a
         # correction agreement). Decimal subtraction has no sign-inversion failure mode -
         # confirmed directly rather than assumed, since this specific input was never tested.
-        leakage = calculate_rebate_leakage(Decimal("-1000"), None)
+        leakage = calculate_rebate_leakage(Decimal(-1000), None)
         self.assertEqual(leakage, Decimal("-1000.0000"))  # received defaults to 0; -1000 - 0 = -1000, correct
 
     def test_aggregate_leakage_with_mixed_negative_and_positive_periods_sums_correctly_not_dampened(self):
         # [DEMO]: confirms the sum is a genuine arithmetic sum, not silently dampened/absorbed
         # towards zero when signs mix within one aggregate call.
-        mixed = [(Decimal("500000"), Decimal("550000")), (Decimal("300000"), None)]
+        mixed = [(Decimal(500000), Decimal(550000)), (Decimal(300000), None)]
         total = calculate_aggregate_rebate_leakage(mixed)
         self.assertEqual(total, Decimal("250000.0000"))  # -50000 + 300000
 
@@ -150,6 +153,7 @@ class TestRebateSymmetryAdversarialInputs(unittest.TestCase):
         # takes an already-sourced actual figure, never a calculate_rebate_leakage return value -
         # checked directly against its real signature/docstring, not assumed.
         import inspect
+
         from app.analytics.management_accounting import resolve_trade_spend_for_period
         source = inspect.getsource(resolve_trade_spend_for_period)
         self.assertNotIn("calculate_rebate_leakage", source)
@@ -168,9 +172,9 @@ class TestCustomerNetMarginDoubleCountingPrevention(unittest.TestCase):
 
     def test_gross_basis_with_real_trade_spend_computes_normally(self):
         result = calculate_customer_net_margin(
-            revenue=Decimal("100000"), cogs=Decimal("70000"),
-            direct_logistics_cost=Decimal("8000"), warehouse_abc_cost=Decimal("4000"),
-            trade_spend=Decimal("5000"), revenue_basis="gross",
+            revenue=Decimal(100000), cogs=Decimal(70000),
+            direct_logistics_cost=Decimal(8000), warehouse_abc_cost=Decimal(4000),
+            trade_spend=Decimal(5000), revenue_basis="gross",
         )
         self.assertEqual(result["net_margin"], Decimal("13000.0000"))
 
@@ -180,7 +184,7 @@ class TestCustomerNetMarginDoubleCountingPrevention(unittest.TestCase):
         with self.assertRaises(ValueError):
             calculate_customer_net_margin(
                 revenue=Decimal("353202524.93"), cogs=Decimal("287394425.05"),
-                direct_logistics_cost=Decimal("0"), warehouse_abc_cost=Decimal("0"),
+                direct_logistics_cost=Decimal(0), warehouse_abc_cost=Decimal(0),
                 trade_spend=Decimal("3145913.07"), revenue_basis="net_of_waterfall",
             )
 
@@ -189,17 +193,17 @@ class TestCustomerNetMarginDoubleCountingPrevention(unittest.TestCase):
         # matches the "WITHOUT double-count" figure computed directly against real production data.
         result = calculate_customer_net_margin(
             revenue=Decimal("353202524.93"), cogs=Decimal("287394425.05"),
-            direct_logistics_cost=Decimal("0"), warehouse_abc_cost=Decimal("0"),
-            trade_spend=Decimal("0"), revenue_basis="net_of_waterfall",
+            direct_logistics_cost=Decimal(0), warehouse_abc_cost=Decimal(0),
+            trade_spend=Decimal(0), revenue_basis="net_of_waterfall",
         )
         self.assertEqual(result["net_margin"], Decimal("65808099.8800"))
 
     def test_unrecognized_revenue_basis_is_refused(self):
         with self.assertRaises(ValueError):
             calculate_customer_net_margin(
-                revenue=Decimal("100000"), cogs=Decimal("70000"),
-                direct_logistics_cost=Decimal("8000"), warehouse_abc_cost=Decimal("4000"),
-                trade_spend=Decimal("0"), revenue_basis="not_a_real_basis",
+                revenue=Decimal(100000), cogs=Decimal(70000),
+                direct_logistics_cost=Decimal(8000), warehouse_abc_cost=Decimal(4000),
+                trade_spend=Decimal(0), revenue_basis="not_a_real_basis",
             )
 
     def test_demo_trade_spend_and_settlement_discounts_together_exceeding_gross_revenue_flags_negative_net_revenue_explicitly(self):
@@ -207,18 +211,18 @@ class TestCustomerNetMarginDoubleCountingPrevention(unittest.TestCase):
         # extreme but legitimate state (a heavily over-rebated account), not clamped to zero and
         # now explicitly flagged as its own condition, distinct from a merely negative net_margin.
         result = calculate_customer_net_margin(
-            revenue=Decimal("50000"), cogs=Decimal("20000"),
-            direct_logistics_cost=Decimal("1000"), warehouse_abc_cost=Decimal("500"),
-            trade_spend=Decimal("60000"), revenue_basis="gross",
+            revenue=Decimal(50000), cogs=Decimal(20000),
+            direct_logistics_cost=Decimal(1000), warehouse_abc_cost=Decimal(500),
+            trade_spend=Decimal(60000), revenue_basis="gross",
         )
         self.assertEqual(result["net_revenue"], Decimal("-10000.0000"))
         self.assertTrue(result["is_net_revenue_negative"])
 
     def test_positive_net_revenue_is_not_flagged(self):
         result = calculate_customer_net_margin(
-            revenue=Decimal("100000"), cogs=Decimal("70000"),
-            direct_logistics_cost=Decimal("8000"), warehouse_abc_cost=Decimal("4000"),
-            trade_spend=Decimal("5000"), revenue_basis="gross",
+            revenue=Decimal(100000), cogs=Decimal(70000),
+            direct_logistics_cost=Decimal(8000), warehouse_abc_cost=Decimal(4000),
+            trade_spend=Decimal(5000), revenue_basis="gross",
         )
         self.assertFalse(result["is_net_revenue_negative"])
 
@@ -226,9 +230,9 @@ class TestCustomerNetMarginDoubleCountingPrevention(unittest.TestCase):
 class TestCustomerNetMargin(unittest.TestCase):
     def test_worked_example(self):
         result = calculate_customer_net_margin(
-            revenue=Decimal("100000"), cogs=Decimal("70000"),
-            direct_logistics_cost=Decimal("8000"), warehouse_abc_cost=Decimal("4000"),
-            trade_spend=Decimal("0"), revenue_basis="gross",
+            revenue=Decimal(100000), cogs=Decimal(70000),
+            direct_logistics_cost=Decimal(8000), warehouse_abc_cost=Decimal(4000),
+            trade_spend=Decimal(0), revenue_basis="gross",
         )
         self.assertEqual(result["gross_margin"], Decimal("30000.0000"))
         self.assertEqual(result["cost_to_serve"], Decimal("12000.0000"))
@@ -239,18 +243,18 @@ class TestCustomerNetMargin(unittest.TestCase):
         # A customer whose cost-to-serve exceeds gross margin is a real, important finding -
         # clamping it to zero would hide exactly the signal this metric exists to surface.
         result = calculate_customer_net_margin(
-            revenue=Decimal("10000"), cogs=Decimal("8000"),
-            direct_logistics_cost=Decimal("1500"), warehouse_abc_cost=Decimal("1200"),
-            trade_spend=Decimal("0"), revenue_basis="gross",
+            revenue=Decimal(10000), cogs=Decimal(8000),
+            direct_logistics_cost=Decimal(1500), warehouse_abc_cost=Decimal(1200),
+            trade_spend=Decimal(0), revenue_basis="gross",
         )
         self.assertEqual(result["net_margin"], Decimal("-700.0000"))
         self.assertLess(result["net_margin_pct"], 0)
 
     def test_zero_revenue_customer_gives_none_percentage_not_error(self):
         result = calculate_customer_net_margin(
-            revenue=Decimal("0"), cogs=Decimal("0"),
-            direct_logistics_cost=Decimal("500"), warehouse_abc_cost=Decimal("200"),
-            trade_spend=Decimal("0"), revenue_basis="gross",
+            revenue=Decimal(0), cogs=Decimal(0),
+            direct_logistics_cost=Decimal(500), warehouse_abc_cost=Decimal(200),
+            trade_spend=Decimal(0), revenue_basis="gross",
         )
         self.assertIsNone(result["net_margin_pct"])
         self.assertEqual(result["net_margin"], Decimal("-700.0000"))  # the absolute figure still computes
@@ -262,9 +266,9 @@ class TestCustomerNetMargin(unittest.TestCase):
         # is unchanged by trade_spend - the two are genuinely different concepts and must not be
         # conflated into one number.
         result = calculate_customer_net_margin(
-            revenue=Decimal("100000"), cogs=Decimal("70000"),
-            direct_logistics_cost=Decimal("8000"), warehouse_abc_cost=Decimal("4000"),
-            trade_spend=Decimal("5000"), revenue_basis="gross",
+            revenue=Decimal(100000), cogs=Decimal(70000),
+            direct_logistics_cost=Decimal(8000), warehouse_abc_cost=Decimal(4000),
+            trade_spend=Decimal(5000), revenue_basis="gross",
         )
         self.assertEqual(result["net_revenue"], Decimal("95000.0000"))
         self.assertEqual(result["gross_margin"], Decimal("25000.0000"))  # 95000 - 70000, not 100000 - 70000
@@ -278,8 +282,8 @@ class TestCustomerNetMargin(unittest.TestCase):
         # which correctly returns a real Decimal("0") - never an implicit language-level default.
         with self.assertRaises(TypeError):
             calculate_customer_net_margin(
-                revenue=Decimal("100000"), cogs=Decimal("70000"),
-                direct_logistics_cost=Decimal("8000"), warehouse_abc_cost=Decimal("4000"),
+                revenue=Decimal(100000), cogs=Decimal(70000),
+                direct_logistics_cost=Decimal(8000), warehouse_abc_cost=Decimal(4000),
             )
 
     def test_explicit_zero_trade_spend_behaves_identically_to_the_old_default(self):
@@ -287,9 +291,9 @@ class TestCustomerNetMargin(unittest.TestCase):
         # trade_spend now passed explicitly (as resolve_trade_spend_for_period would return for
         # a customer with no sell-side agreement) rather than omitted.
         result = calculate_customer_net_margin(
-            revenue=Decimal("100000"), cogs=Decimal("70000"),
-            direct_logistics_cost=Decimal("8000"), warehouse_abc_cost=Decimal("4000"),
-            trade_spend=Decimal("0"), revenue_basis="gross",
+            revenue=Decimal(100000), cogs=Decimal(70000),
+            direct_logistics_cost=Decimal(8000), warehouse_abc_cost=Decimal(4000),
+            trade_spend=Decimal(0), revenue_basis="gross",
         )
         self.assertEqual(result["gross_margin"], Decimal("30000.0000"))
         self.assertEqual(result["net_margin"], Decimal("18000.0000"))
@@ -300,9 +304,9 @@ class TestCustomerNetMargin(unittest.TestCase):
         # genuinely exceeds what cogs/cost-to-serve alone would suggest must show a real negative
         # margin, same "never hide a bad number" discipline as every other branch of this function.
         result = calculate_customer_net_margin(
-            revenue=Decimal("10000"), cogs=Decimal("6000"),
-            direct_logistics_cost=Decimal("500"), warehouse_abc_cost=Decimal("200"),
-            trade_spend=Decimal("4000"), revenue_basis="gross",
+            revenue=Decimal(10000), cogs=Decimal(6000),
+            direct_logistics_cost=Decimal(500), warehouse_abc_cost=Decimal(200),
+            trade_spend=Decimal(4000), revenue_basis="gross",
         )
         # net_revenue = 6000, gross_margin = 6000-6000 = 0, cost_to_serve = 700, net_margin = -700
         self.assertEqual(result["net_margin"], Decimal("-700.0000"))
@@ -311,8 +315,8 @@ class TestCustomerNetMargin(unittest.TestCase):
 class TestWorkingCapitalMetrics(unittest.TestCase):
     def test_worked_example_matches_hand_calculation(self):
         result = calculate_working_capital_metrics(
-            ar=Decimal("500000"), ap=Decimal("300000"), inventory=Decimal("400000"),
-            annual_revenue=Decimal("3650000"), annual_cogs=Decimal("2555000"),
+            ar=Decimal(500000), ap=Decimal(300000), inventory=Decimal(400000),
+            annual_revenue=Decimal(3650000), annual_cogs=Decimal(2555000),
         )
         # DSO = 500000/3650000*365 = 50.0 exactly
         self.assertEqual(result["dso"], Decimal("50.0"))
@@ -323,8 +327,8 @@ class TestWorkingCapitalMetrics(unittest.TestCase):
 
     def test_ccc_composed_from_the_same_three_figures(self):
         result = calculate_working_capital_metrics(
-            ar=Decimal("500000"), ap=Decimal("300000"), inventory=Decimal("400000"),
-            annual_revenue=Decimal("3650000"), annual_cogs=Decimal("2555000"),
+            ar=Decimal(500000), ap=Decimal(300000), inventory=Decimal(400000),
+            annual_revenue=Decimal(3650000), annual_cogs=Decimal(2555000),
         )
         self.assertEqual(result["ccc"], result["dio"] + result["dso"] - result["dpo"])
 
@@ -332,23 +336,23 @@ class TestWorkingCapitalMetrics(unittest.TestCase):
         # DPO exceeding DIO+DSO means the business collects cash before paying suppliers - a
         # genuinely good position, and the formula must show it as negative, not floor at zero.
         result = calculate_working_capital_metrics(
-            ar=Decimal("50000"), ap=Decimal("400000"), inventory=Decimal("50000"),
-            annual_revenue=Decimal("3650000"), annual_cogs=Decimal("2555000"),
+            ar=Decimal(50000), ap=Decimal(400000), inventory=Decimal(50000),
+            annual_revenue=Decimal(3650000), annual_cogs=Decimal(2555000),
         )
         self.assertLess(result["ccc"], 0)
 
     def test_zero_revenue_gives_none_dso_not_error(self):
         result = calculate_working_capital_metrics(
-            ar=Decimal("500000"), ap=Decimal("300000"), inventory=Decimal("400000"),
-            annual_revenue=Decimal("0"), annual_cogs=Decimal("2555000"),
+            ar=Decimal(500000), ap=Decimal(300000), inventory=Decimal(400000),
+            annual_revenue=Decimal(0), annual_cogs=Decimal(2555000),
         )
         self.assertIsNone(result["dso"])
         self.assertIsNone(result["ccc"])  # can't compose CCC when one of its three inputs is undefined
 
     def test_zero_cogs_gives_none_dio_and_dpo(self):
         result = calculate_working_capital_metrics(
-            ar=Decimal("500000"), ap=Decimal("300000"), inventory=Decimal("400000"),
-            annual_revenue=Decimal("3650000"), annual_cogs=Decimal("0"),
+            ar=Decimal(500000), ap=Decimal(300000), inventory=Decimal(400000),
+            annual_revenue=Decimal(3650000), annual_cogs=Decimal(0),
         )
         self.assertIsNone(result["dio"])
         self.assertIsNone(result["dpo"])
@@ -359,15 +363,15 @@ class TestWorkingCapitalMetrics(unittest.TestCase):
         # spec's own ratio formula - added as an explicit optional parameter. None when omitted,
         # never silently treated as zero (which would understate the ratio).
         result = calculate_working_capital_metrics(
-            ar=Decimal("500000"), ap=Decimal("300000"), inventory=Decimal("400000"),
-            annual_revenue=Decimal("3650000"), annual_cogs=Decimal("2555000"),
+            ar=Decimal(500000), ap=Decimal(300000), inventory=Decimal(400000),
+            annual_revenue=Decimal(3650000), annual_cogs=Decimal(2555000),
         )
         self.assertIsNone(result["working_capital_ratio"])
 
     def test_working_capital_ratio_computes_when_cash_is_supplied(self):
         result = calculate_working_capital_metrics(
-            ar=Decimal("500000"), ap=Decimal("300000"), inventory=Decimal("400000"),
-            annual_revenue=Decimal("3650000"), annual_cogs=Decimal("2555000"), cash=Decimal("100000"),
+            ar=Decimal(500000), ap=Decimal(300000), inventory=Decimal(400000),
+            annual_revenue=Decimal(3650000), annual_cogs=Decimal(2555000), cash=Decimal(100000),
         )
         # (500000+400000+100000)/300000 = 3.333...
         self.assertAlmostEqual(float(result["working_capital_ratio"]), 3.33, places=2)
@@ -376,9 +380,9 @@ class TestWorkingCapitalMetrics(unittest.TestCase):
 class TestAgingBucketClassification(unittest.TestCase):
     def test_buckets_sum_to_total_invoice_value(self):
         invoices = [
-            {"amount": Decimal("1000"), "days_overdue": 5},
-            {"amount": Decimal("2000"), "days_overdue": 45},
-            {"amount": Decimal("1500"), "days_overdue": 200},
+            {"amount": Decimal(1000), "days_overdue": 5},
+            {"amount": Decimal(2000), "days_overdue": 45},
+            {"amount": Decimal(1500), "days_overdue": 200},
         ]
         result = classify_aging_buckets(invoices)
         self.assertEqual(sum(result.values()), Decimal("4500.0000"))
@@ -386,7 +390,7 @@ class TestAgingBucketClassification(unittest.TestCase):
     def test_exact_boundary_at_30_days_lands_in_days_30_not_current(self):
         # The conservative reading of an ambiguous boundary - same posture as
         # classify_expiry_risk's inclusive-boundary decision.
-        result = classify_aging_buckets([{"amount": Decimal("1000"), "days_overdue": 30}])
+        result = classify_aging_buckets([{"amount": Decimal(1000), "days_overdue": 30}])
         self.assertEqual(result["days_30"], Decimal("1000.0000"))
         self.assertEqual(result["current"], Decimal("0.0000"))
 
@@ -395,7 +399,7 @@ class TestAgingBucketClassification(unittest.TestCase):
                  (60, "days_60"), (89, "days_60"), (90, "days_90"), (119, "days_90"),
                  (120, "days_120_plus"), (500, "days_120_plus")]
         for days, expected_bucket in cases:
-            result = classify_aging_buckets([{"amount": Decimal("100"), "days_overdue": days}])
+            result = classify_aging_buckets([{"amount": Decimal(100), "days_overdue": days}])
             self.assertEqual(result[expected_bucket], Decimal("100.0000"), f"days_overdue={days}")
 
     def test_empty_invoice_list_gives_all_zero_buckets_not_error(self):
@@ -406,6 +410,7 @@ class TestAgingBucketClassification(unittest.TestCase):
 class TestDeterminism(unittest.TestCase):
     def test_module_never_calls_now_or_today_or_imports_db(self):
         import ast
+
         import app.analytics.management_accounting as module
 
         tree = ast.parse(open(module.__file__).read())

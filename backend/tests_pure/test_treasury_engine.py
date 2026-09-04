@@ -21,7 +21,7 @@ from decimal import Decimal
 
 from app.analytics.treasury_engine import calculate_fx_transaction_exposure
 
-DEMO_USD_AMOUNT = Decimal("100000")
+DEMO_USD_AMOUNT = Decimal(100000)
 DEMO_SPOT_ORIGINAL = Decimal("18.00")
 DEMO_SPOT_DEVALUED = Decimal("19.80")
 DEMO_FEC_RATE = Decimal("18.20")
@@ -37,14 +37,14 @@ class TestCalculateFxTransactionExposure(unittest.TestCase):
     def test_zero_transaction_date_spot_rate_is_refused(self):
         with self.assertRaises(ValueError):
             calculate_fx_transaction_exposure(
-                foreign_currency_amount=DEMO_USD_AMOUNT, transaction_date_spot_rate=Decimal("0"),
+                foreign_currency_amount=DEMO_USD_AMOUNT, transaction_date_spot_rate=Decimal(0),
                 reporting_date_spot_rate=DEMO_SPOT_DEVALUED,
             )
 
     def test_negative_spot_rate_is_refused(self):
         with self.assertRaises(ValueError):
             calculate_fx_transaction_exposure(
-                foreign_currency_amount=DEMO_USD_AMOUNT, transaction_date_spot_rate=Decimal("-18"),
+                foreign_currency_amount=DEMO_USD_AMOUNT, transaction_date_spot_rate=Decimal(-18),
                 reporting_date_spot_rate=DEMO_SPOT_DEVALUED,
             )
 
@@ -96,7 +96,7 @@ class TestCalculateFxTransactionExposure(unittest.TestCase):
         with self.assertRaises(ValueError):
             calculate_fx_transaction_exposure(
                 foreign_currency_amount=DEMO_USD_AMOUNT, transaction_date_spot_rate=DEMO_SPOT_ORIGINAL,
-                reporting_date_spot_rate=DEMO_SPOT_DEVALUED, fec_contract_rate=Decimal("0"),
+                reporting_date_spot_rate=DEMO_SPOT_DEVALUED, fec_contract_rate=Decimal(0),
             )
 
 

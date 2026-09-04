@@ -125,55 +125,55 @@ class TestDueAlerts(unittest.TestCase):
 
 class TestEscalation(unittest.TestCase):
     def test_no_escalation_returns_base_price(self):
-        result = calculate_escalated_price(Decimal("100"), EscalationType.NONE)
+        result = calculate_escalated_price(Decimal(100), EscalationType.NONE)
         self.assertEqual(result, Decimal("100.0000"))
 
     def test_fixed_percentage_escalation(self):
         result = calculate_escalated_price(
-            Decimal("100"), EscalationType.FIXED_PERCENTAGE, escalation_rate_pct=Decimal("0.05")
+            Decimal(100), EscalationType.FIXED_PERCENTAGE, escalation_rate_pct=Decimal("0.05")
         )
         self.assertEqual(result, Decimal("105.0000"))
 
     def test_fixed_percentage_compounds_over_multiple_periods(self):
         result = calculate_escalated_price(
-            Decimal("100"), EscalationType.FIXED_PERCENTAGE,
+            Decimal(100), EscalationType.FIXED_PERCENTAGE,
             escalation_rate_pct=Decimal("0.05"), periods_elapsed=2,
         )
         self.assertEqual(result, Decimal("110.2500"))  # 100 * 1.05^2, not 100 * 1.10
 
     def test_fixed_percentage_without_rate_raises(self):
         with self.assertRaises(ValueError):
-            calculate_escalated_price(Decimal("100"), EscalationType.FIXED_PERCENTAGE)
+            calculate_escalated_price(Decimal(100), EscalationType.FIXED_PERCENTAGE)
 
     def test_cpi_linked_without_index_value_raises(self):
         # The exact guardrail ADR-009 exists for - must never silently default.
         with self.assertRaises(ValueError):
-            calculate_escalated_price(Decimal("100"), EscalationType.CPI_LINKED)
+            calculate_escalated_price(Decimal(100), EscalationType.CPI_LINKED)
 
     def test_cpi_linked_with_supplied_index_value_calculates(self):
         result = calculate_escalated_price(
-            Decimal("100"), EscalationType.CPI_LINKED, external_index_value_pct=Decimal("0.045")
+            Decimal(100), EscalationType.CPI_LINKED, external_index_value_pct=Decimal("0.045")
         )
         self.assertEqual(result, Decimal("104.5000"))
 
     def test_tiered_escalation_or_negotiated_rejected_by_single_formula_function(self):
         with self.assertRaises(ValueError):
-            calculate_escalated_price(Decimal("100"), EscalationType.TIERED)
+            calculate_escalated_price(Decimal(100), EscalationType.TIERED)
 
 
 class TestTieredEscalation(unittest.TestCase):
     def test_applies_highest_reached_band(self):
         bands = [
-            TieredEscalationBand(Decimal("0"), Decimal("0.02")),
-            TieredEscalationBand(Decimal("1000000"), Decimal("0.04")),
-            TieredEscalationBand(Decimal("5000000"), Decimal("0.06")),
+            TieredEscalationBand(Decimal(0), Decimal("0.02")),
+            TieredEscalationBand(Decimal(1000000), Decimal("0.04")),
+            TieredEscalationBand(Decimal(5000000), Decimal("0.06")),
         ]
-        result = calculate_tiered_escalated_price(Decimal("100"), Decimal("2500000"), bands)
+        result = calculate_tiered_escalated_price(Decimal(100), Decimal(2500000), bands)
         self.assertEqual(result, Decimal("104.0000"))  # 4% band, not 2% or 6%
 
     def test_no_bands_raises(self):
         with self.assertRaises(ValueError):
-            calculate_tiered_escalated_price(Decimal("100"), Decimal("500"), [])
+            calculate_tiered_escalated_price(Decimal(100), Decimal(500), [])
 
 
 if __name__ == "__main__":

@@ -13,8 +13,9 @@ Revises: 0017
 from __future__ import annotations
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 revision = "0018"
 down_revision = "0017"

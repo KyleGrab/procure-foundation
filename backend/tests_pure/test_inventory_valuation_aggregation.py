@@ -19,8 +19,8 @@ from app.analytics.inventory_valuation_aggregation import (
 class TestCalculateBatchAssetValuation(unittest.TestCase):
     def test_sums_quantity_times_unit_cost_across_records(self):
         records = [
-            {"quantity_on_hand": Decimal("124"), "unit_cost": Decimal("137.73")},
-            {"quantity_on_hand": Decimal("674"), "unit_cost": Decimal("4.79")},
+            {"quantity_on_hand": Decimal(124), "unit_cost": Decimal("137.73")},
+            {"quantity_on_hand": Decimal(674), "unit_cost": Decimal("4.79")},
         ]
         # 124*137.73=17078.52, 674*4.79=3228.46 -> 20306.98
         self.assertEqual(calculate_batch_asset_valuation(records), Decimal("20306.98"))
@@ -29,11 +29,11 @@ class TestCalculateBatchAssetValuation(unittest.TestCase):
         # total_valuation is a cross-check field only (inventory_valuation_validation.py's own
         # docstring) - the aggregate must always be recomputed from quantity*unit_cost, never
         # trust a possibly-inconsistent per-row total as the source of truth for the batch sum.
-        records = [{"quantity_on_hand": Decimal("100"), "unit_cost": Decimal("10"), "total_valuation": Decimal("999999")}]
-        self.assertEqual(calculate_batch_asset_valuation(records), Decimal("1000"))
+        records = [{"quantity_on_hand": Decimal(100), "unit_cost": Decimal(10), "total_valuation": Decimal(999999)}]
+        self.assertEqual(calculate_batch_asset_valuation(records), Decimal(1000))
 
     def test_empty_batch_returns_zero_not_error(self):
-        self.assertEqual(calculate_batch_asset_valuation([]), Decimal("0"))
+        self.assertEqual(calculate_batch_asset_valuation([]), Decimal(0))
 
     def test_record_missing_unit_cost_is_excluded_not_treated_as_zero(self):
         # A record that failed validation (no unit_cost) contributing a silent $0 to the
@@ -41,10 +41,10 @@ class TestCalculateBatchAssetValuation(unittest.TestCase):
         # excluded rows should never have been passed in as "validated_records" in the first
         # place, but this function defends against that anyway rather than silently miscounting.
         records = [
-            {"quantity_on_hand": Decimal("100"), "unit_cost": Decimal("10")},
-            {"quantity_on_hand": Decimal("50")},  # no unit_cost
+            {"quantity_on_hand": Decimal(100), "unit_cost": Decimal(10)},
+            {"quantity_on_hand": Decimal(50)},  # no unit_cost
         ]
-        self.assertEqual(calculate_batch_asset_valuation(records), Decimal("1000"))
+        self.assertEqual(calculate_batch_asset_valuation(records), Decimal(1000))
 
 
 class TestBuildReconciliationAuditContext(unittest.TestCase):
@@ -60,7 +60,7 @@ class TestBuildReconciliationAuditContext(unittest.TestCase):
 
     def test_file_hash_is_optional_and_omitted_not_null_when_absent(self):
         context = build_reconciliation_audit_context(
-            record_count=1, total_asset_valuation=Decimal("100"), snapshot_date=date(2026, 8, 26), file_hash=None,
+            record_count=1, total_asset_valuation=Decimal(100), snapshot_date=date(2026, 8, 26), file_hash=None,
         )
         self.assertNotIn("file_hash", context)
 

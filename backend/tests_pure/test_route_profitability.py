@@ -34,8 +34,8 @@ REAL_SALES_EX_VAT = Decimal("45189.62")
 class TestCalculateTripFixedCost(unittest.TestCase):
     def test_demo_all_three_pools_sum_correctly(self):
         result = calculate_trip_fixed_cost(
-            driver_base_salary=Decimal("850"), co_driver_base_salary=Decimal("650"),
-            fixed_vehicle_asset_cost=Decimal("1200"),
+            driver_base_salary=Decimal(850), co_driver_base_salary=Decimal(650),
+            fixed_vehicle_asset_cost=Decimal(1200),
         )
         self.assertEqual(result, Decimal("2700.0000"))
 
@@ -44,28 +44,28 @@ class TestCalculateTripFixedCost(unittest.TestCase):
         # a single-driver route (no co-driver) is a real, common, valid scenario, not a data
         # error - co_driver_base_salary is the one pool where zero must not be rejected.
         result = calculate_trip_fixed_cost(
-            driver_base_salary=Decimal("850"), co_driver_base_salary=Decimal("0"),
-            fixed_vehicle_asset_cost=Decimal("1200"),
+            driver_base_salary=Decimal(850), co_driver_base_salary=Decimal(0),
+            fixed_vehicle_asset_cost=Decimal(1200),
         )
         self.assertEqual(result, Decimal("2050.0000"))
 
     def test_zero_driver_base_salary_is_refused_every_trip_has_a_driver(self):
         with self.assertRaises(ValueError):
             calculate_trip_fixed_cost(
-                driver_base_salary=Decimal("0"), co_driver_base_salary=Decimal("0"),
-                fixed_vehicle_asset_cost=Decimal("1200"),
+                driver_base_salary=Decimal(0), co_driver_base_salary=Decimal(0),
+                fixed_vehicle_asset_cost=Decimal(1200),
             )
 
     def test_zero_fixed_vehicle_asset_cost_is_refused_every_trip_uses_a_real_vehicle(self):
         with self.assertRaises(ValueError):
             calculate_trip_fixed_cost(
-                driver_base_salary=Decimal("850"), co_driver_base_salary=Decimal("0"),
-                fixed_vehicle_asset_cost=Decimal("0"),
+                driver_base_salary=Decimal(850), co_driver_base_salary=Decimal(0),
+                fixed_vehicle_asset_cost=Decimal(0),
             )
 
     def test_missing_any_pool_is_a_type_error(self):
         with self.assertRaises(TypeError):
-            calculate_trip_fixed_cost(driver_base_salary=Decimal("850"), co_driver_base_salary=Decimal("0"))
+            calculate_trip_fixed_cost(driver_base_salary=Decimal(850), co_driver_base_salary=Decimal(0))
 
 
 class TestCalculateDistanceVariableCost(unittest.TestCase):
@@ -74,7 +74,7 @@ class TestCalculateDistanceVariableCost(unittest.TestCase):
         # supply chain principle: stop-start driving in a dense multi-drop leg burns more fuel
         # per km than steady stem-leg driving.
         result = calculate_distance_variable_cost(
-            stem_distance_km=Decimal("15"), drop_distance_km=Decimal("25"),
+            stem_distance_km=Decimal(15), drop_distance_km=Decimal(25),
             base_rate_per_km=Decimal("8.50"), stop_start_multiplier=Decimal("1.3"),
         )
         # stem: 15 * 8.50 = 127.50 (no multiplier)
@@ -85,7 +85,7 @@ class TestCalculateDistanceVariableCost(unittest.TestCase):
 
     def test_multiplier_of_exactly_1_makes_drop_and_stem_rates_identical(self):
         result = calculate_distance_variable_cost(
-            stem_distance_km=Decimal("10"), drop_distance_km=Decimal("10"),
+            stem_distance_km=Decimal(10), drop_distance_km=Decimal(10),
             base_rate_per_km=Decimal("8.50"), stop_start_multiplier=Decimal("1.0"),
         )
         self.assertEqual(result["stem_leg_cost"], result["drop_leg_cost"])
@@ -95,14 +95,14 @@ class TestCalculateDistanceVariableCost(unittest.TestCase):
         # is never MORE fuel-efficient than steady driving - a multiplier < 1 is a data error.
         with self.assertRaises(ValueError):
             calculate_distance_variable_cost(
-                stem_distance_km=Decimal("10"), drop_distance_km=Decimal("10"),
+                stem_distance_km=Decimal(10), drop_distance_km=Decimal(10),
                 base_rate_per_km=Decimal("8.50"), stop_start_multiplier=Decimal("0.8"),
             )
 
     def test_missing_stop_start_multiplier_is_a_type_error(self):
         with self.assertRaises(TypeError):
             calculate_distance_variable_cost(
-                stem_distance_km=Decimal("10"), drop_distance_km=Decimal("10"), base_rate_per_km=Decimal("8.50"),
+                stem_distance_km=Decimal(10), drop_distance_km=Decimal(10), base_rate_per_km=Decimal("8.50"),
             )
 
 
@@ -128,7 +128,7 @@ class TestCalculateWarehousePickingLaborCost(unittest.TestCase):
     def test_zero_cube_is_refused(self):
         with self.assertRaises(ValueError):
             calculate_warehouse_picking_labor_cost(
-                sku_line_count=18, total_cube_m3=Decimal("0"),
+                sku_line_count=18, total_cube_m3=Decimal(0),
                 rate_per_line=Decimal("12.50"), rate_per_cube_m3=Decimal("35.00"),
             )
 
@@ -138,23 +138,23 @@ class TestCalculateDropLatencyDemurrageCost(unittest.TestCase):
         # Demurrage only applies BEYOND a contractual free-time allowance - the first N minutes
         # at the bay are normal, expected drop time, not a penalty.
         result = calculate_drop_latency_demurrage_cost(
-            time_at_bay_minutes=Decimal("25"), free_time_minutes=Decimal("30"),
-            demurrage_rate_per_minute=Decimal("15"),
+            time_at_bay_minutes=Decimal(25), free_time_minutes=Decimal(30),
+            demurrage_rate_per_minute=Decimal(15),
         )
         self.assertEqual(result, Decimal("0.0000"))
 
     def test_demo_time_exceeding_free_allowance_is_charged_only_for_the_excess(self):
         result = calculate_drop_latency_demurrage_cost(
-            time_at_bay_minutes=Decimal("50"), free_time_minutes=Decimal("30"),
-            demurrage_rate_per_minute=Decimal("15"),
+            time_at_bay_minutes=Decimal(50), free_time_minutes=Decimal(30),
+            demurrage_rate_per_minute=Decimal(15),
         )
         self.assertEqual(result, Decimal("300.0000"))  # (50-30) * 15
 
     def test_negative_time_at_bay_is_refused(self):
         with self.assertRaises(ValueError):
             calculate_drop_latency_demurrage_cost(
-                time_at_bay_minutes=Decimal("-5"), free_time_minutes=Decimal("30"),
-                demurrage_rate_per_minute=Decimal("15"),
+                time_at_bay_minutes=Decimal(-5), free_time_minutes=Decimal(30),
+                demurrage_rate_per_minute=Decimal(15),
             )
 
 
@@ -163,9 +163,9 @@ class TestCalculateTrueRouteProfitability(unittest.TestCase):
         # Real revenue/COGS (CAA 127155, West Coast, 3 July 2026); [DEMO] cost pool breakdown
         # since no real driver salary/fuel rate/picking rate/demurrage figures exist anywhere.
         result = calculate_true_route_profitability(
-            revenue=REAL_SALES_EX_VAT, cogs=REAL_COGS, trade_spend=Decimal("0"), revenue_basis="gross",
-            trip_fixed_costs=Decimal("2700"), distance_variable_costs=Decimal("403.75"),
-            activity_time_costs=Decimal("372"),
+            revenue=REAL_SALES_EX_VAT, cogs=REAL_COGS, trade_spend=Decimal(0), revenue_basis="gross",
+            trip_fixed_costs=Decimal(2700), distance_variable_costs=Decimal("403.75"),
+            activity_time_costs=Decimal(372),
         )
         # net_revenue=45189.62, gross_margin=45189.62-36686.08=8503.54 (matches the sheet's own
         # real GP/Rands figure exactly), cost_to_serve=2700+403.75+372=3475.75
@@ -181,9 +181,9 @@ class TestCalculateTrueRouteProfitability(unittest.TestCase):
         # route's entire gross margin - must show a real negative figure and the explicit
         # is_net_revenue_negative-style signal, never floor-clamped to zero.
         result = calculate_true_route_profitability(
-            revenue=Decimal("10000"), cogs=Decimal("6000"), trade_spend=Decimal("0"), revenue_basis="gross",
-            trip_fixed_costs=Decimal("2500"), distance_variable_costs=Decimal("1000"),
-            activity_time_costs=Decimal("1500"),
+            revenue=Decimal(10000), cogs=Decimal(6000), trade_spend=Decimal(0), revenue_basis="gross",
+            trip_fixed_costs=Decimal(2500), distance_variable_costs=Decimal(1000),
+            activity_time_costs=Decimal(1500),
         )
         # gross_margin=4000, cost_to_serve=5000, net_net_profit=-1000
         self.assertEqual(result["net_net_profit"], Decimal("-1000.0000"))
@@ -195,21 +195,21 @@ class TestCalculateTrueRouteProfitability(unittest.TestCase):
         # exact same net_margin figure as calculate_true_route_profitability's net_net_profit.
         from app.analytics.management_accounting import calculate_customer_net_margin
         direct = calculate_customer_net_margin(
-            revenue=REAL_SALES_EX_VAT, cogs=REAL_COGS, trade_spend=Decimal("0"), revenue_basis="gross",
-            direct_logistics_cost=Decimal("2700") + Decimal("403.75"), warehouse_abc_cost=Decimal("372"),
+            revenue=REAL_SALES_EX_VAT, cogs=REAL_COGS, trade_spend=Decimal(0), revenue_basis="gross",
+            direct_logistics_cost=Decimal(2700) + Decimal("403.75"), warehouse_abc_cost=Decimal(372),
         )
         via_route_engine = calculate_true_route_profitability(
-            revenue=REAL_SALES_EX_VAT, cogs=REAL_COGS, trade_spend=Decimal("0"), revenue_basis="gross",
-            trip_fixed_costs=Decimal("2700"), distance_variable_costs=Decimal("403.75"),
-            activity_time_costs=Decimal("372"),
+            revenue=REAL_SALES_EX_VAT, cogs=REAL_COGS, trade_spend=Decimal(0), revenue_basis="gross",
+            trip_fixed_costs=Decimal(2700), distance_variable_costs=Decimal("403.75"),
+            activity_time_costs=Decimal(372),
         )
         self.assertEqual(direct["net_margin"], via_route_engine["net_net_profit"])
 
     def test_missing_any_cost_pool_is_a_type_error(self):
         with self.assertRaises(TypeError):
             calculate_true_route_profitability(
-                revenue=REAL_SALES_EX_VAT, cogs=REAL_COGS, trade_spend=Decimal("0"), revenue_basis="gross",
-                trip_fixed_costs=Decimal("2700"), distance_variable_costs=Decimal("403.75"),
+                revenue=REAL_SALES_EX_VAT, cogs=REAL_COGS, trade_spend=Decimal(0), revenue_basis="gross",
+                trip_fixed_costs=Decimal(2700), distance_variable_costs=Decimal("403.75"),
             )
 
 

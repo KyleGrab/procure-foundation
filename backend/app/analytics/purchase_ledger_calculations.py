@@ -46,7 +46,7 @@ def calculate_purchase_price_variance(
     expected_cost = round_currency(reference_price * quantity)
     actual_cost = round_currency(actual_price * quantity)
     variance = round_currency(actual_cost - expected_cost)
-    variance_pct = None if expected_cost == 0 else round_currency(variance / expected_cost * 100) / Decimal("100")
+    variance_pct = None if expected_cost == 0 else round_currency(variance / expected_cost * 100) / Decimal(100)
     return PriceVarianceResult(expected_cost, actual_cost, variance, variance_pct)
 
 
@@ -58,14 +58,14 @@ def calculate_invoice_line_net_amount(
     separately, never folded into this figure)."""
     gross = quantity * unit_price
     if discount_pct:
-        gross = gross * (Decimal("1") - discount_pct)
+        gross = gross * (Decimal(1) - discount_pct)
     return round_currency(gross)
 
 
 def calculate_invoice_line_total_incl_tax(net_amount: Decimal, tax_pct: Decimal | None) -> Decimal:
     if not tax_pct:
         return round_currency(net_amount)
-    return round_currency(net_amount * (Decimal("1") + tax_pct))
+    return round_currency(net_amount * (Decimal(1) + tax_pct))
 
 
 class ReceiptStatus(str, Enum):
@@ -89,7 +89,7 @@ def calculate_receipt_variance(
     if quantity_ordered < 0 or quantity_received < 0:
         raise ValueError("quantities cannot be negative")
     variance = quantity_received - quantity_ordered
-    variance_pct = None if quantity_ordered == 0 else round_currency(variance / quantity_ordered * 100) / Decimal("100")
+    variance_pct = None if quantity_ordered == 0 else round_currency(variance / quantity_ordered * 100) / Decimal(100)
     if variance == 0:
         status = ReceiptStatus.COMPLETE
     elif variance < 0:

@@ -103,7 +103,7 @@ def calculate_excess_stock_value(
     baseline, no figure" rule as PPV's reference_price and hard_saving's baseline_methodology)."""
     if reorder_level is None or unit_cost is None:
         return None
-    excess_quantity = max(Decimal("0"), quantity_on_hand - reorder_level)
+    excess_quantity = max(Decimal(0), quantity_on_hand - reorder_level)
     return round_currency(excess_quantity * unit_cost)
 
 
