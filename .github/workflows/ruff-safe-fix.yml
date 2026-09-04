@@ -28,6 +28,10 @@ jobs:
         if: always()
         run: cd backend && ruff check . --statistics || true
 
+      - name: List remaining Ruff locations
+        if: always()
+        run: cd backend && ruff check . --output-format=concise || true
+
       - name: Open a reviewable PR with whatever changed
         # Pinned to the v8.1.1 release commit, verified directly against
         # https://github.com/peter-evans/create-pull-request/releases - GitHub-signed, not a
