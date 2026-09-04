@@ -6,7 +6,7 @@ type - price_review_service, rebate_service, or a future caller), not here.
 """
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from sqlalchemy import func, select
@@ -76,7 +76,7 @@ async def _write_opportunity_measure_event(
         old_approved_by_user_id=old_approved_by_user_id, new_approved_by_user_id=new_approved_by_user_id,
         old_effective_period_start=old_period_start, new_effective_period_start=new_effective_period_start,
         old_effective_period_end=old_period_end, new_effective_period_end=new_effective_period_end,
-        actor_user_id=actor_user_id, occurred_at=datetime.now(timezone.utc),
+        actor_user_id=actor_user_id, occurred_at=datetime.now(UTC),
         change_reference=change_reference, change_reason_code=change_reason_code,
     )
     db.add(event)
@@ -125,7 +125,7 @@ async def create_opportunity(
         savings_type=payload.savings_type,
         baseline_value=payload.baseline_value, baseline_methodology=payload.baseline_methodology,
         confidence=payload.confidence, status="identified", created_by_user_id=user_id,
-        algorithm_version="v1", calculation_timestamp=datetime.now(timezone.utc),
+        algorithm_version="v1", calculation_timestamp=datetime.now(UTC),
         annual_financial_impact_status="unknown",  # placeholder until the genesis event below sets it for real
         realised_savings_status="unknown",
     )
@@ -190,7 +190,7 @@ async def advance_waterfall_stage(
         opportunity.status = target_status
         if target_status == "approved":
             opportunity.approved_by_user_id = user_id
-            opportunity.approved_at = datetime.now(timezone.utc)
+            opportunity.approved_at = datetime.now(UTC)
 
     await audit_service.record(
         db, organisation_id=organisation_id, user_id=user_id, action="opportunity_stage_advanced",
@@ -228,12 +228,12 @@ async def record_realised_savings(
     event = await _write_opportunity_measure_event(
         db, opportunity=opportunity, measure_code="realised_savings",
         new_amount=realised_savings, new_status="confirmed", new_source_basis="reconciled_actuals",
-        new_approved_at=datetime.now(timezone.utc), new_approved_by_user_id=user_id,
+        new_approved_at=datetime.now(UTC), new_approved_by_user_id=user_id,
         new_effective_period_start=effective_period_start, new_effective_period_end=effective_period_end,
         actor_user_id=user_id, change_reference=change_reference, change_reason_code="evidence_received",
     )
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     for evidence_type, external_reference in (
         ("documented_baseline", documented_baseline_reference),
         ("actual_cost_source", actual_cost_source_reference),

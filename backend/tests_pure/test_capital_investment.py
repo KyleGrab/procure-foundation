@@ -29,8 +29,8 @@ from app.analytics.capital_investment import (
 )
 
 DEMO_COLD_STORAGE_CASH_FLOWS = [
-    Decimal("-10000000"), Decimal("2800000"), Decimal("2800000"),
-    Decimal("2800000"), Decimal("2800000"), Decimal("2800000"),
+    Decimal(-10000000), Decimal(2800000), Decimal(2800000),
+    Decimal(2800000), Decimal(2800000), Decimal(2800000),
 ]
 
 
@@ -52,7 +52,7 @@ class TestCalculateNpv(unittest.TestCase):
 
     def test_zero_discount_rate_is_refused(self):
         with self.assertRaises(ValueError):
-            calculate_npv(discount_rate=Decimal("0"), cash_flows=DEMO_COLD_STORAGE_CASH_FLOWS)
+            calculate_npv(discount_rate=Decimal(0), cash_flows=DEMO_COLD_STORAGE_CASH_FLOWS)
 
     def test_negative_discount_rate_is_refused(self):
         with self.assertRaises(ValueError):
@@ -85,17 +85,17 @@ class TestCalculateIrr(unittest.TestCase):
     def test_irregular_cash_flow_with_multiple_sign_changes_refuses_not_a_misleading_root(self):
         # [DEMO]: -1000, +3000, -2500 - two sign changes (Descartes' rule allows up to 2 real
         # roots here). Returning "a" root would misrepresent which is economically meaningful.
-        irregular = [Decimal("-1000"), Decimal("3000"), Decimal("-2500")]
+        irregular = [Decimal(-1000), Decimal(3000), Decimal(-2500)]
         self.assertIsNone(calculate_irr(irregular))
 
     def test_all_positive_cash_flows_have_no_real_irr_and_return_none(self):
         # No outlay at all - NPV never crosses zero for any rate, since there's nothing to
         # discount against. Not an error, not a fabricated 0% - None.
-        all_positive = [Decimal("1000"), Decimal("500"), Decimal("500")]
+        all_positive = [Decimal(1000), Decimal(500), Decimal(500)]
         self.assertIsNone(calculate_irr(all_positive))
 
     def test_all_negative_cash_flows_have_no_real_irr_and_return_none(self):
-        all_negative = [Decimal("-1000"), Decimal("-500")]
+        all_negative = [Decimal(-1000), Decimal(-500)]
         self.assertIsNone(calculate_irr(all_negative))
 
 
@@ -110,7 +110,7 @@ class TestCalculateDiscountedPaybackPeriod(unittest.TestCase):
     def test_project_that_never_recovers_its_outlay_returns_none_not_a_fabricated_period(self):
         # [DEMO]: a R10,000,000 outlay with inflows too small to ever recover it within the
         # given horizon - None, not a misleadingly large or absent number.
-        never_recovers = [Decimal("-10000000"), Decimal("500000"), Decimal("500000")]
+        never_recovers = [Decimal(-10000000), Decimal(500000), Decimal(500000)]
         payback = calculate_discounted_payback_period(discount_rate=Decimal("0.10"), cash_flows=never_recovers)
         self.assertIsNone(payback)
 
@@ -123,8 +123,8 @@ class TestApplyTaxShieldToCashFlows(unittest.TestCase):
     def test_demo_tax_shield_increases_each_periods_net_cash_flow(self):
         # [DEMO]: R2,000,000/year wear-and-tear allowance, 28% tax rate -> R560,000/year real
         # cash benefit from reduced tax payable, added to the operational cash flow.
-        operational = [Decimal("2800000")] * 5
-        allowances = [Decimal("2000000")] * 5
+        operational = [Decimal(2800000)] * 5
+        allowances = [Decimal(2000000)] * 5
         shielded = apply_tax_shield_to_cash_flows(
             net_operational_cash_flows=operational, capital_allowance_schedule=allowances,
             tax_rate=Decimal("0.28"),
@@ -134,8 +134,8 @@ class TestApplyTaxShieldToCashFlows(unittest.TestCase):
     def test_mismatched_schedule_lengths_are_refused_not_silently_truncated_or_padded(self):
         with self.assertRaises(ValueError):
             apply_tax_shield_to_cash_flows(
-                net_operational_cash_flows=[Decimal("2800000")] * 5,
-                capital_allowance_schedule=[Decimal("2000000")] * 3,  # deliberately mismatched
+                net_operational_cash_flows=[Decimal(2800000)] * 5,
+                capital_allowance_schedule=[Decimal(2000000)] * 3,  # deliberately mismatched
                 tax_rate=Decimal("0.28"),
             )
 
@@ -145,20 +145,20 @@ class TestFlagSpeculativeResidualValue(unittest.TestCase):
         # Inclusive boundary - same conservative posture as classify_expiry_risk/
         # classify_aging_buckets elsewhere in this codebase.
         result = flag_speculative_residual_value(
-            residual_value=Decimal("2000000"), initial_capital_outlay=Decimal("10000000"),
+            residual_value=Decimal(2000000), initial_capital_outlay=Decimal(10000000),
         )
         self.assertTrue(result["is_speculative"])
         self.assertIsNotNone(result["warning"])
 
     def test_demo_residual_below_20_pct_is_not_flagged(self):
         result = flag_speculative_residual_value(
-            residual_value=Decimal("1500000"), initial_capital_outlay=Decimal("10000000"),
+            residual_value=Decimal(1500000), initial_capital_outlay=Decimal(10000000),
         )
         self.assertFalse(result["is_speculative"])
         self.assertIsNone(result["warning"])
 
     def test_zero_initial_outlay_does_not_crash_returns_not_speculative(self):
-        result = flag_speculative_residual_value(residual_value=Decimal("100"), initial_capital_outlay=Decimal("0"))
+        result = flag_speculative_residual_value(residual_value=Decimal(100), initial_capital_outlay=Decimal(0))
         self.assertFalse(result["is_speculative"])
 
 
@@ -171,7 +171,7 @@ class TestCapitalInvestmentStructuralIsolation(unittest.TestCase):
         # documented against.
         result = evaluate_capital_investment(
             discount_rate=Decimal("0.12"), cash_flows=DEMO_COLD_STORAGE_CASH_FLOWS,
-            residual_value=Decimal("1000000"),
+            residual_value=Decimal(1000000),
         )
         forbidden_keys = {"cogs", "cost_of_goods_sold", "inventory_value", "net_margin", "dio", "dpo", "ccc", "mac_control_total"}
         self.assertEqual(set(result.keys()) & forbidden_keys, set())
@@ -179,7 +179,7 @@ class TestCapitalInvestmentStructuralIsolation(unittest.TestCase):
     def test_evaluation_result_bundles_npv_irr_payback_and_residual_flag_together(self):
         result = evaluate_capital_investment(
             discount_rate=Decimal("0.12"), cash_flows=DEMO_COLD_STORAGE_CASH_FLOWS,
-            residual_value=Decimal("1000000"),
+            residual_value=Decimal(1000000),
         )
         self.assertIn("npv", result)
         self.assertIn("irr", result)

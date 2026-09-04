@@ -5,7 +5,7 @@ uploaded spreadsheet can never end up in application logs (spec Section 95).
 import json
 import logging
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 _DENYLISTED_FIELDS = {"password", "password_hash", "token", "access_key", "secret_key", "secret"}
 
@@ -13,7 +13,7 @@ _DENYLISTED_FIELDS = {"password", "password_hash", "token", "access_key", "secre
 class JSONFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         payload = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),

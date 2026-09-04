@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import unittest
 from datetime import date
-from decimal import Decimal
 
 from app.ai.extraction_guardrails import promote_fields_from_extraction
 from app.analytics.contract_calculations import (

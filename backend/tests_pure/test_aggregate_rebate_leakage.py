@@ -11,9 +11,9 @@ from app.analytics.rebate_calculations import calculate_aggregate_rebate_leakage
 class TestAggregateRebateLeakage(unittest.TestCase):
     def test_sums_leakage_across_multiple_periods(self):
         periods = [
-            (Decimal("50000"), Decimal("30000")),  # 20000 leakage
-            (Decimal("20000"), Decimal("20000")),  # 0 leakage
-            (Decimal("10000"), None),               # 10000 leakage - nothing received yet
+            (Decimal(50000), Decimal(30000)),  # 20000 leakage
+            (Decimal(20000), Decimal(20000)),  # 0 leakage
+            (Decimal(10000), None),               # 10000 leakage - nothing received yet
         ]
         self.assertEqual(calculate_aggregate_rebate_leakage(periods), Decimal("30000.0000"))
 
@@ -28,7 +28,7 @@ class TestAggregateRebateLeakage(unittest.TestCase):
         # over-receipt IS real, signed information - same "don't clamp away sign" principle as
         # calculate_price_change), so this test locks in that the aggregate passes that behavior
         # through honestly rather than silently changing it.
-        periods = [(Decimal("10000"), Decimal("12000")), (Decimal("10000"), Decimal("0"))]
+        periods = [(Decimal(10000), Decimal(12000)), (Decimal(10000), Decimal(0))]
         self.assertEqual(calculate_aggregate_rebate_leakage(periods), Decimal("8000.0000"))
 
 

@@ -6,9 +6,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
-from app.core.constants import Currency
-
 from app.analytics.purchase_ledger_calculations import ReferencePriceSource
+from app.core.constants import Currency
 
 
 class PurchaseInvoiceLineInput(BaseModel):

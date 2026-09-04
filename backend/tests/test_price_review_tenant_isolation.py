@@ -4,7 +4,6 @@ must never access Organisation B's price reviews, files, price-review lines, sup
 exports, AI context"). Same caveat as the rest of backend/tests/: needs a live Postgres, not run
 in this sandbox - see tests_pure/ for what's genuinely executed here.
 """
-import pytest
 
 
 async def _register_org_and_supplier(client, email: str, org_name: str, supplier_name: str) -> tuple[str, str]:

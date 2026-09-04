@@ -13,6 +13,7 @@ matching logic of its own.
 """
 from __future__ import annotations
 
+from datetime import UTC
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -34,7 +35,11 @@ from app.analytics.price_review_summary import PriceReviewLineForSummary, summar
 from app.core.exceptions import ConflictError, NotFoundError, ValidationFailedError
 from app.db.models import Opportunity, PriceReview, PriceReviewFile, PriceReviewLine, Supplier
 from app.ingestion.staging import compute_checksum
-from app.matching.pack_parser import UnrecognizedPackFormatError, parse_pack_string, price_per_base_unit
+from app.matching.pack_parser import (
+    UnrecognizedPackFormatError,
+    parse_pack_string,
+    price_per_base_unit,
+)
 from app.matching.review import requires_human_review
 from app.matching.scorer import CandidateItem, MatchStatus, find_best_match
 from app.schemas.price_review import (
@@ -320,12 +325,12 @@ async def set_buyer_decision(
     db: AsyncSession, *, organisation_id: int, user_id: int, line: PriceReviewLine,
     payload: BuyerDecisionUpdate,
 ) -> PriceReviewLine:
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     line.buyer_decision = payload.decision
     line.buyer_decision_notes = payload.notes
     line.buyer_decision_by_user_id = user_id
-    line.buyer_decision_at = datetime.now(timezone.utc)
+    line.buyer_decision_at = datetime.now(UTC)
 
     await audit_service.record(
         db, organisation_id=organisation_id, user_id=user_id, action="price_review_buyer_decision",

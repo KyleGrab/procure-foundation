@@ -164,7 +164,7 @@ def calculate_drop_latency_demurrage_cost(
         raise ValueError(f"time_at_bay_minutes cannot be negative, got {time_at_bay_minutes}")
     if free_time_minutes < 0:
         raise ValueError(f"free_time_minutes cannot be negative, got {free_time_minutes}")
-    excess_minutes = max(Decimal("0"), time_at_bay_minutes - free_time_minutes)
+    excess_minutes = max(Decimal(0), time_at_bay_minutes - free_time_minutes)
     return round_currency(excess_minutes * demurrage_rate_per_minute)
 
 

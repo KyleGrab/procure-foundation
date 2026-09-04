@@ -2,9 +2,9 @@
 services/rebate_service.py per docs/architecture.md's rule."""
 from __future__ import annotations
 
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import APIRouter, Depends
 
 from app.core.constants import Permission
 from app.core.exceptions import NotFoundError

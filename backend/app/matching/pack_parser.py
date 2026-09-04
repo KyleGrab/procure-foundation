@@ -17,21 +17,21 @@ _UNIT_CONVERSIONS: dict[str, tuple[str, Decimal]] = {
     "g": ("kg", Decimal("0.001")),
     "gram": ("kg", Decimal("0.001")),
     "grams": ("kg", Decimal("0.001")),
-    "kg": ("kg", Decimal("1")),
-    "kilogram": ("kg", Decimal("1")),
-    "kilograms": ("kg", Decimal("1")),
+    "kg": ("kg", Decimal(1)),
+    "kilogram": ("kg", Decimal(1)),
+    "kilograms": ("kg", Decimal(1)),
     "ml": ("L", Decimal("0.001")),
     "millilitre": ("L", Decimal("0.001")),
     "millilitres": ("L", Decimal("0.001")),
-    "l": ("L", Decimal("1")),
-    "litre": ("L", Decimal("1")),
-    "litres": ("L", Decimal("1")),
-    "liter": ("L", Decimal("1")),
-    "liters": ("L", Decimal("1")),
-    "each": ("each", Decimal("1")),
-    "unit": ("each", Decimal("1")),
-    "units": ("each", Decimal("1")),
-    "ea": ("each", Decimal("1")),
+    "l": ("L", Decimal(1)),
+    "litre": ("L", Decimal(1)),
+    "litres": ("L", Decimal(1)),
+    "liter": ("L", Decimal(1)),
+    "liters": ("L", Decimal(1)),
+    "each": ("each", Decimal(1)),
+    "unit": ("each", Decimal(1)),
+    "units": ("each", Decimal(1)),
+    "ea": ("each", Decimal(1)),
 }
 
 # "24 x 330ml", "6 x 2L", "4x5kg" (case-insensitive, optional spaces around x)
@@ -82,18 +82,18 @@ def parse_pack_string(raw: str) -> ParsedPack:
     match = _CASE_RE.match(text)
     if match:
         qty = Decimal(match.group("qty"))
-        return _build(qty, Decimal("1"), "each")
+        return _build(qty, Decimal(1), "each")
 
     match = _COUNT_RE.match(text)
     if match:
         qty = Decimal(match.group("qty"))
-        return _build(qty, Decimal("1"), "each")
+        return _build(qty, Decimal(1), "each")
 
     match = _SINGLE_RE.match(text)
     if match:
         size = Decimal(match.group("size"))
         unit = match.group("unit").lower()
-        return _build(Decimal("1"), size, unit)
+        return _build(Decimal(1), size, unit)
 
     raise UnrecognizedPackFormatError(f"Could not parse pack string: {raw!r}")
 

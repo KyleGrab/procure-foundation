@@ -21,7 +21,7 @@ def calculate_batch_asset_valuation(records: list[dict]) -> Decimal:
     reported figure instead of being flagged and recomputed correctly. A record missing unit_cost
     contributes nothing rather than being treated as a $0 line.
     """
-    total = Decimal("0")
+    total = Decimal(0)
     for record in records:
         quantity = record.get("quantity_on_hand")
         unit_cost = record.get("unit_cost")

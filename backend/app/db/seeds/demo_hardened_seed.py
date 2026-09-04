@@ -26,12 +26,16 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
-from sqlalchemy import select  # noqa: E402
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine  # noqa: E402
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
-from app.core.security import hash_password  # noqa: E402
-from app.db.models import Organisation, OrganisationMembership, User  # noqa: E402
-from app.db.seeds.management_accounting_demo import (  # noqa: E402
+from app.core.security import hash_password
+from app.db.models import Organisation, OrganisationMembership, User
+from app.db.seeds.management_accounting_demo import (
     DEMO_ORG_NAME,
     seed_management_accounting_demo,
 )

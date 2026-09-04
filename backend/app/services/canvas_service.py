@@ -22,7 +22,10 @@ from app.analytics.canvas_lens import (
     build_management_lens_graph,
     build_procurement_lens_graph,
 )
-from app.analytics.inventory_calculations import calculate_days_since_last_movement, classify_expiry_risk
+from app.analytics.inventory_calculations import (
+    calculate_days_since_last_movement,
+    classify_expiry_risk,
+)
 from app.analytics.management_accounting import calculate_variance_vs_prior
 from app.analytics.rebate_calculations import calculate_aggregate_rebate_leakage
 from app.db.models import (
@@ -52,7 +55,7 @@ async def build_procurement_lens(db: AsyncSession, *, organisation_id: int) -> C
     supplier_inputs = [
         SupplierSpendInput(
             id=s.id, public_id=str(s.public_id), name=s.legal_name, category=s.category,
-            total_spend=spend_by_supplier_id.get(str(s.id), Decimal("0")),
+            total_spend=spend_by_supplier_id.get(str(s.id), Decimal(0)),
         )
         for s in suppliers
     ]
