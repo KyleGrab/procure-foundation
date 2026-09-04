@@ -39,6 +39,14 @@ include = ["app*"]
 line-length = 100
 target-version = "py312"
 
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.File",
+    "fastapi.Form",
+    "app.core.permissions.require_permission",
+]
+
 [tool.mypy]
 python_version = "3.12"
 strict = true
