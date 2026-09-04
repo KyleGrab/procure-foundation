@@ -1,0 +1,45 @@
+name: Ruff safe-fix (manual)
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  ruff-safe-fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned Ruff
+        run: pip install ruff==0.16.6
+
+      - name: Run safe fixes only (never --unsafe-fixes)
+        run: cd backend && ruff check . --fix
+
+      - name: Open a reviewable PR with whatever changed
+        # Pinned to the v8.1.1 release commit, verified directly against
+        # https://github.com/peter-evans/create-pull-request/releases - GitHub-signed, not a
+        # moving tag - so this step can't silently change behaviour if the tag is ever repointed.
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          commit-message: "Ruff safe-fix pass (ruff==0.16.6, --fix only, no rule changes)"
+          title: "Ruff safe-fix pass — review before merging"
+          body: |
+            Automated, one-time run of `ruff check . --fix` using the pinned `ruff==0.16.6`,
+            triggered manually via workflow_dispatch. Safe fixes only - `--unsafe-fixes` was
+            never used. No rule selection was changed - the full default rule set stays as-is.
+
+            Please review this diff carefully before merging. Expect only mechanical changes
+            (import ordering, unused-import removal, and similar Ruff-classified "safe" fixes) -
+            nothing here should touch financial logic, migrations, RLS policies, or test
+            behaviour. If anything looks like more than a mechanical change, do not merge -
+            flag it for review instead.
+          branch: ruff-safe-fix-pass
+          delete-branch: true
