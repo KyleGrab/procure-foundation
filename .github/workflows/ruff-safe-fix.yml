@@ -22,6 +22,7 @@ jobs:
 
       - name: Run safe fixes only (never --unsafe-fixes)
         run: cd backend && ruff check . --fix
+        continue-on-error: true
 
       - name: Open a reviewable PR with whatever changed
         # Pinned to the v8.1.1 release commit, verified directly against
