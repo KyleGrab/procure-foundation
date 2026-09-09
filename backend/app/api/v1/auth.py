@@ -46,6 +46,10 @@ async def me(
     claims: AccessTokenClaims = Depends(get_current_claims),
     db: AsyncSession = Depends(get_db_unauthenticated),
 ) -> CurrentUser:
+    # K2: claims.user_id is signature-validated (get_current_claims decoded and verified the
+    # JWT) - safe to trust as this transaction's self-membership-discovery context.
+    await auth_service.set_current_user_id(db, claims.user_id)
+
     result = await db.execute(select(User).where(User.id == claims.user_id))
     user = result.scalar_one()
 
