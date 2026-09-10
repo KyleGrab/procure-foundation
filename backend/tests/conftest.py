@@ -7,8 +7,6 @@ from __future__ import annotations
 
 import os
 
-import asyncpg
-import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -17,8 +15,8 @@ os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://procureiq:procureiq@
 os.environ.setdefault("DATABASE_URL_SYNC", "postgresql+psycopg://procureiq:procureiq@localhost:5432/procureiq_test")
 os.environ.setdefault("SECRET_KEY", "test-secret-key-not-for-production-use-only")
 
-from app.db.base import Base  # noqa: E402
-from app.main import app  # noqa: E402
+from app.db.base import Base
+from app.main import app
 
 
 @pytest_asyncio.fixture(scope="session", autouse=True)
@@ -115,7 +113,12 @@ async def p03_seed(db_session):
     from datetime import date
 
     from app.db.models import (
-        Opportunity, Organisation, OrganisationMembership, RebateAgreement, RebatePeriodActual, User,
+        Opportunity,
+        Organisation,
+        OrganisationMembership,
+        RebateAgreement,
+        RebatePeriodActual,
+        User,
     )
 
     org_a = Organisation(name="P-03 Test Org A", default_currency="ZAR", country="ZA")

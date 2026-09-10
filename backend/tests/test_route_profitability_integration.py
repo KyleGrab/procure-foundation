@@ -19,13 +19,12 @@ route function directly, bypassing FastAPI's dependency injection (and therefore
 entirely - there's no existing convention to match here since nothing else in this codebase
 tests a route this way, so this is a new, narrowly-scoped pattern, not a reused one.
 """
-import io
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from app.core.exceptions import EvidenceRequiredError
-from app.core.security import AccessTokenClaims, decode_access_token
+from app.core.security import AccessTokenClaims
 
 
 async def _register_org(client, email: str, org_name: str) -> str:

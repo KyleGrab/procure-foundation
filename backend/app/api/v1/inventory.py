@@ -31,7 +31,10 @@ from app.core.permissions import require_permission
 from app.core.security import AccessTokenClaims
 from app.db.models import Location
 from app.db.session import get_db
-from app.ingestion.inventory_valuation_mapping import apply_mapping, suggest_inventory_valuation_mapping
+from app.ingestion.inventory_valuation_mapping import (
+    apply_mapping,
+    suggest_inventory_valuation_mapping,
+)
 from app.ingestion.inventory_valuation_validation import validate_inventory_valuation_rows
 from app.ingestion.validation import serialize_validation_issues
 from app.services.inventory_valuation_service import ingest_inventory_valuation

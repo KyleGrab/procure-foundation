@@ -114,7 +114,7 @@ def calculate_rebate_leakage(expected_amount: Decimal, received_amount: Decimal 
     yet" - the full expected_amount is at-risk leakage until a credit note/payment reference sets
     it, never assumed equal to expected (spec's own explicit warning against that assumption).
     """
-    received = received_amount if received_amount is not None else Decimal("0")
+    received = received_amount if received_amount is not None else Decimal(0)
     return round_currency(expected_amount - received)
 
 
@@ -126,7 +126,7 @@ def calculate_aggregate_rebate_leakage(period_pairs: list[tuple[Decimal, Decimal
     clamping it away here would hide a real correction/over-payment, not just tidy a number."""
     return round_currency(sum(
         (calculate_rebate_leakage(expected, received) for expected, received in period_pairs),
-        Decimal("0"),
+        Decimal(0),
     ))
 
 
@@ -190,8 +190,8 @@ def aggregate_transactions_for_period(
     tests_pure/test_rebate_calculations.py without a DB.
     """
     in_period = [t for t in transactions if period_start <= t[2] <= period_end]
-    total_spend = sum((t[0] for t in in_period), Decimal("0"))
-    total_volume = sum((t[1] for t in in_period), Decimal("0"))
+    total_spend = sum((t[0] for t in in_period), Decimal(0))
+    total_volume = sum((t[1] for t in in_period), Decimal(0))
     return TransactionAggregate(
         total_spend=round_currency(total_spend), total_volume=total_volume,
         transaction_count=len(in_period),

@@ -20,8 +20,9 @@ import sys
 from decimal import Decimal
 
 import psycopg
-from alembic import command
 from alembic.config import Config
+
+from alembic import command
 
 
 def _dsn() -> str:

@@ -34,7 +34,7 @@ def aggregate_spend(rows: list[tuple[str, str, Decimal]]) -> list[SpendItem]:
     totals: dict[str, Decimal] = {}
     labels: dict[str, str] = {}
     for key, label, amount in rows:
-        totals[key] = totals.get(key, Decimal("0")) + amount
+        totals[key] = totals.get(key, Decimal(0)) + amount
         labels[key] = label
     items = [SpendItem(key, labels[key], round_currency(total)) for key, total in totals.items()]
     return sorted(items, key=lambda i: -i.amount)
@@ -66,15 +66,15 @@ def calculate_abc_classification(
     documented here rather than defended against, since re-sorting silently would hide a caller
     bug instead of surfacing it.
     """
-    total = sum((i.amount for i in items), Decimal("0"))
+    total = sum((i.amount for i in items), Decimal(0))
     if total == 0:
-        return [ABCResult(i, Decimal("0"), ABCClass.C) for i in items]
+        return [ABCResult(i, Decimal(0), ABCClass.C) for i in items]
 
     results = []
-    running = Decimal("0")
+    running = Decimal(0)
     for item in items:
         running += item.amount
-        cumulative_pct = round_currency(running / total * 100) / Decimal("100")
+        cumulative_pct = round_currency(running / total * 100) / Decimal(100)
         if cumulative_pct <= a_threshold_pct:
             classification = ABCClass.A
         elif cumulative_pct <= b_threshold_pct:
@@ -97,18 +97,18 @@ def calculate_pareto_contributors(items: list[SpendItem], target_pct: Decimal = 
     """The "top suppliers/SKUs accounting for 80% of spend" figure (spec Section 21), as its own
     view distinct from ABC banding - ABC classifies every item, this answers "how few items does
     it actually take" which is the number that goes in an executive summary."""
-    total = sum((i.amount for i in items), Decimal("0"))
+    total = sum((i.amount for i in items), Decimal(0))
     if total == 0:
-        return ParetoResult([], 0, len(items), Decimal("0"))
+        return ParetoResult([], 0, len(items), Decimal(0))
 
     contributors = []
-    running = Decimal("0")
+    running = Decimal(0)
     for item in items:
         contributors.append(item)
         running += item.amount
         if running / total >= target_pct:
             break
-    cumulative_pct = round_currency(running / total * 100) / Decimal("100")
+    cumulative_pct = round_currency(running / total * 100) / Decimal(100)
     return ParetoResult(contributors, len(contributors), len(items), cumulative_pct)
 
 
@@ -133,7 +133,7 @@ def calculate_month_over_month_trend(monthly_totals: list[tuple[str, Decimal]]) 
     for month_label, amount in monthly_totals:
         change_pct = None
         if prior_amount is not None and prior_amount != 0:
-            change_pct = round_currency((amount - prior_amount) / prior_amount * 100) / Decimal("100")
+            change_pct = round_currency((amount - prior_amount) / prior_amount * 100) / Decimal(100)
         points.append(MonthOverMonthPoint(month_label, round_currency(amount), change_pct))
         prior_amount = amount
     return points
@@ -174,6 +174,6 @@ def calculate_price_consistency(
     prices = [o.price for o in observations]
     min_price, max_price = min(prices), max(prices)
     spread = round_currency(max_price - min_price)
-    spread_pct = None if min_price == 0 else round_currency(spread / min_price * 100) / Decimal("100")
+    spread_pct = None if min_price == 0 else round_currency(spread / min_price * 100) / Decimal(100)
     is_significant = spread_pct is not None and spread_pct >= significance_threshold_pct
     return PriceConsistencyResult(min_price, max_price, spread, spread_pct, is_significant, len(observations))

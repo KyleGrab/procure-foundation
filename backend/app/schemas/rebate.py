@@ -13,7 +13,7 @@ from app.core.constants import Currency
 class RebateBandInput(BaseModel):
     threshold_spend: Decimal
     rate_pct: Decimal = Field(
-        ge=Decimal("0"), le=Decimal("1"),
+        ge=Decimal(0), le=Decimal(1),
         description="Fraction (0.025 = 2.5%). A rebate rate can't be negative and can't "
         "plausibly exceed 100% of spend.",
     )
@@ -27,13 +27,13 @@ class RebateAgreementCreate(BaseModel):
         pattern="^(fixed_percentage|tiered|volume|growth|fixed_amount|retrospective)$"
     )
     period_type: str = Field(default="quarterly", pattern="^(quarterly|annual)$")
-    flat_rate_pct: Decimal | None = Field(default=None, ge=Decimal("0"), le=Decimal("1"))
+    flat_rate_pct: Decimal | None = Field(default=None, ge=Decimal(0), le=Decimal(1))
     bands: list[RebateBandInput] | None = None
     fixed_amount: Decimal | None = None
     currency: Currency = Currency.ZAR
 
     @model_validator(mode="after")
-    def _validate_type_specific_fields(self) -> "RebateAgreementCreate":
+    def _validate_type_specific_fields(self) -> RebateAgreementCreate:
         # Mirrors the DB CHECK constraints in migration 0005 - validated here too so the error
         # surfaces before a round-trip, not just after (same pattern as ContractCreate).
         if self.rebate_type in ("fixed_percentage", "volume", "growth") and self.flat_rate_pct is None:
@@ -69,7 +69,7 @@ class RebatePeriodActualCreate(BaseModel):
     actual_volume: Decimal | None = Field(default=None, ge=0)
 
     @model_validator(mode="after")
-    def _validate_period(self) -> "RebatePeriodActualCreate":
+    def _validate_period(self) -> RebatePeriodActualCreate:
         if self.period_end <= self.period_start:
             raise ValueError("period_end must be after period_start")
         return self

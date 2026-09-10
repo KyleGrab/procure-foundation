@@ -142,7 +142,7 @@ def calculate_escalated_price(
     if escalation_type == EscalationType.FIXED_PERCENTAGE:
         if escalation_rate_pct is None:
             raise ValueError("fixed_percentage escalation requires escalation_rate_pct")
-        factor = (Decimal("1") + escalation_rate_pct) ** periods_elapsed
+        factor = (Decimal(1) + escalation_rate_pct) ** periods_elapsed
         return round_currency(base_price * factor)
 
     if escalation_type == EscalationType.CPI_LINKED:
@@ -151,7 +151,7 @@ def calculate_escalated_price(
                 "cpi_linked escalation requires external_index_value_pct to be supplied "
                 "explicitly - this function will not estimate or default it (ADR-009)"
             )
-        factor = (Decimal("1") + external_index_value_pct) ** periods_elapsed
+        factor = (Decimal(1) + external_index_value_pct) ** periods_elapsed
         return round_currency(base_price * factor)
 
     raise ValueError(
@@ -177,4 +177,4 @@ def calculate_tiered_escalated_price(
     if not applicable:
         return round_currency(base_price)  # spend hasn't reached the first tier yet
     best = max(applicable, key=lambda b: b.threshold_spend)
-    return round_currency(base_price * (Decimal("1") + best.rate_pct))
+    return round_currency(base_price * (Decimal(1) + best.rate_pct))

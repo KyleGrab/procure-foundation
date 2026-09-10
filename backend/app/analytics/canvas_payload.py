@@ -16,7 +16,7 @@ worse than letting the dashboard crash, not better.
 """
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 _CAUGHT_EXCEPTION_TYPES = (ValueError, TypeError)
 

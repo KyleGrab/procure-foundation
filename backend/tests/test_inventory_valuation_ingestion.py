@@ -8,8 +8,8 @@ requirement as every other file in backend/tests/ - written, not executed.
 Needs a real Location row to satisfy InventorySnapshot.location_id's NOT NULL constraint - this
 test creates one directly via db_session, same as _register_org creates an Organisation.
 """
-from decimal import Decimal
 from datetime import date
+from decimal import Decimal
 
 import pytest
 
@@ -43,8 +43,8 @@ async def _create_location(db_session, organisation_id: int, code: str) -> int:
 
 
 _SAMPLE_RECORDS = [
-    {"supplier_sku": "SKU004", "description": "BEEF MINCE 1KG", "quantity_on_hand": Decimal("124"), "unit_cost": Decimal("137.73")},
-    {"supplier_sku": "SKU001", "description": "CHICKEN BREAST 2KG", "quantity_on_hand": Decimal("674"), "unit_cost": Decimal("4.79")},
+    {"supplier_sku": "SKU004", "description": "BEEF MINCE 1KG", "quantity_on_hand": Decimal(124), "unit_cost": Decimal("137.73")},
+    {"supplier_sku": "SKU001", "description": "CHICKEN BREAST 2KG", "quantity_on_hand": Decimal(674), "unit_cost": Decimal("4.79")},
 ]
 
 

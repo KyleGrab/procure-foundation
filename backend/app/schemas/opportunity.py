@@ -26,7 +26,7 @@ class OpportunityCreate(BaseModel):
     confidence: str | None = Field(default=None, pattern="^(low|medium|high)$")
 
     @model_validator(mode="after")
-    def _savings_type_requires_baseline_methodology(self) -> "OpportunityCreate":
+    def _savings_type_requires_baseline_methodology(self) -> OpportunityCreate:
         # analytics-methodology.md §7: a savings figure with no stated baseline isn't auditable -
         # enforced here, not just left as a documentation convention.
         if self.savings_type in ("hard_saving",) and not self.baseline_methodology:
@@ -34,7 +34,7 @@ class OpportunityCreate(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def _annual_financial_impact_requires_effective_period(self) -> "OpportunityCreate":
+    def _annual_financial_impact_requires_effective_period(self) -> OpportunityCreate:
         # P-03: mirrors the same rule enforced service-side and by the DB combination
         # constraint - an amount with no stated period can't be recorded as a real estimate.
         # Checked here too so the caller gets a clear 422 instead of a 409 from the service.
@@ -79,7 +79,7 @@ class OpportunityRealise(BaseModel):
     variance_calculation_reference: str = Field(min_length=1, max_length=128)
 
     @model_validator(mode="after")
-    def _period_start_not_after_end(self) -> "OpportunityRealise":
+    def _period_start_not_after_end(self) -> OpportunityRealise:
         if self.effective_period_start > self.effective_period_end:
             raise ValueError("effective_period_start must not be after effective_period_end")
         return self

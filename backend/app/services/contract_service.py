@@ -7,7 +7,7 @@ DB-dependent, syntax-checked only in this sandbox.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -81,7 +81,7 @@ def refresh_status(contract: Contract, *, today=None) -> None:
         today, contract.expiry_date, deadline, auto_renew=contract.auto_renew
     )
     contract.status = status.value
-    contract.status_calculated_at = datetime.now(timezone.utc)
+    contract.status_calculated_at = datetime.now(UTC)
 
 
 def get_derived_fields(contract: Contract) -> dict:
@@ -177,7 +177,7 @@ async def promote_extraction_fields(
     refresh_status(contract)
     extraction.verification_status = "human_verified"
     extraction.verified_by_user_id = user_id
-    extraction.verified_at = datetime.now(timezone.utc)
+    extraction.verified_at = datetime.now(UTC)
 
     await audit_service.record(
         db, organisation_id=organisation_id, user_id=user_id, action="contract_extraction_promoted",

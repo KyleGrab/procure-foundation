@@ -1,6 +1,5 @@
 """Extends tenant isolation coverage to Phase 4c's tables (purchase_orders, purchase_invoices).
 Same live-Postgres requirement as the rest of backend/tests/ - not run in this sandbox."""
-import pytest
 
 
 async def _register_org_with_supplier(client, email: str, org_name: str) -> tuple[str, str]:

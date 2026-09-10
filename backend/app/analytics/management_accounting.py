@@ -114,7 +114,7 @@ def resolve_trade_spend_for_period(trade_spend_record: Decimal | None, agreement
       whichever service/route layer calls this, not raised as an HTTP-shaped exception here.
     """
     if not agreement_exists:
-        return Decimal("0")
+        return Decimal(0)
     if trade_spend_record is None:
         raise ValueError(
             "A sell-side trade spend agreement exists for this customer but the current "
@@ -506,8 +506,8 @@ def classify_aging_buckets(invoices: list[dict]) -> dict:
     same posture as classify_expiry_risk's inclusive expiring_soon boundary (Phase 5b).
     """
     buckets: dict[str, Decimal] = {
-        "current": Decimal("0"), "days_30": Decimal("0"), "days_60": Decimal("0"),
-        "days_90": Decimal("0"), "days_120_plus": Decimal("0"),
+        "current": Decimal(0), "days_30": Decimal(0), "days_60": Decimal(0),
+        "days_90": Decimal(0), "days_120_plus": Decimal(0),
     }
     for invoice in invoices:
         days = invoice["days_overdue"]

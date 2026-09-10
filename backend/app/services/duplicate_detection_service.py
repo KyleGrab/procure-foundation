@@ -10,6 +10,7 @@ scale, this needs blocking/indexing before the O(n²) scan, not a rewrite of the
 """
 from __future__ import annotations
 
+from datetime import UTC
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -125,11 +126,11 @@ async def review_duplicate_sku_flag(
     """Human confirmation - the never-silently-merge gate. Nothing downstream treats sku_a/sku_b
     as the same product because of this flag alone; that decision belongs to whatever workflow
     the human confirmation is meant to inform (out of scope here - this only records the review)."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     flag.status = "confirmed_duplicate" if confirmed else "rejected"
     flag.reviewed_by_user_id = user_id
-    flag.reviewed_at = datetime.now(timezone.utc)
+    flag.reviewed_at = datetime.now(UTC)
     await audit_service.record(
         db, organisation_id=organisation_id, user_id=user_id, action="duplicate_sku_flag_reviewed",
         entity_type="duplicate_sku_flag", entity_id=str(flag.id), context={"confirmed": confirmed},
@@ -267,13 +268,13 @@ async def review_consolidation_flag(
     determine_consolidation_flag_transition, tests_pure/test_domain_graph.py) before writing
     anything - InvalidConsolidationTransitionError propagates to the route as a 409, same
     pattern as opportunity_service.advance_waterfall_stage."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     new_status = determine_consolidation_flag_transition(flag.status, action)
     flag.status = new_status
     flag.review_notes = notes
     flag.reviewed_by_user_id = user_id
-    flag.reviewed_at = datetime.now(timezone.utc)
+    flag.reviewed_at = datetime.now(UTC)
 
     await audit_service.record(
         db, organisation_id=organisation_id, user_id=user_id, action="consolidation_flag_reviewed",

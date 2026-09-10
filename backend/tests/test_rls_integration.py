@@ -118,8 +118,9 @@ def run_migrations(pg_container, admin_dsn):
     from app.core.config import get_settings
     get_settings.cache_clear()  # env vars above must win over anything cached from an earlier test
 
-    from alembic import command
     from alembic.config import Config
+
+    from alembic import command
 
     backend_dir = __import__("pathlib").Path(__file__).resolve().parent.parent
     cfg = Config(str(backend_dir / "alembic.ini"))
@@ -136,17 +137,16 @@ class TestRlsEnabledAndForced:
     """The exact check ADR-011 exists for - both flags, not just one."""
 
     def test_every_tenant_scoped_table_has_rls_enabled_and_forced(self, admin_dsn):
-        with psycopg.connect(admin_dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
+        with psycopg.connect(admin_dsn) as conn, conn.cursor() as cur:
+            cur.execute(
+                """
                     SELECT relname, relrowsecurity, relforcerowsecurity
                     FROM pg_class
                     WHERE relname = ANY(%s) AND relkind = 'r'
                     """,
-                    (list(TENANT_SCOPED_TABLES),),
-                )
-                rows = {row[0]: (row[1], row[2]) for row in cur.fetchall()}
+                (list(TENANT_SCOPED_TABLES),),
+            )
+            rows = {row[0]: (row[1], row[2]) for row in cur.fetchall()}
 
         assert set(rows.keys()) == set(TENANT_SCOPED_TABLES), (
             f"missing tables in schema: {set(TENANT_SCOPED_TABLES) - set(rows.keys())}"
@@ -156,15 +156,14 @@ class TestRlsEnabledAndForced:
             assert forced, f"{table}: FORCE ROW LEVEL SECURITY is not set (ADR-011)"
 
     def test_tenant_isolation_policy_references_correct_session_variable(self, admin_dsn):
-        with psycopg.connect(admin_dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
+        with psycopg.connect(admin_dsn) as conn, conn.cursor() as cur:
+            cur.execute(
+                """
                     SELECT tablename, qual FROM pg_policies
                     WHERE schemaname = 'public' AND policyname = 'tenant_isolation'
                     """
-                )
-                policies = dict(cur.fetchall())
+            )
+            policies = dict(cur.fetchall())
 
         for table in TENANT_SCOPED_TABLES:
             assert table in policies, f"{table}: no tenant_isolation policy found"
@@ -175,12 +174,11 @@ class TestRlsEnabledAndForced:
 
 class TestProcureiqAppRolePrivileges:
     def test_role_exists_and_is_not_superuser_and_cannot_bypass_rls(self, admin_dsn):
-        with psycopg.connect(admin_dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = 'procureiq_app'"
-                )
-                row = cur.fetchone()
+        with psycopg.connect(admin_dsn) as conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = 'procureiq_app'"
+            )
+            row = cur.fetchone()
         assert row is not None, "procureiq_app role does not exist (ADR-011)"
         rolsuper, rolbypassrls = row
         assert not rolsuper
@@ -189,17 +187,16 @@ class TestProcureiqAppRolePrivileges:
     def test_role_does_not_own_any_tenant_scoped_table(self, admin_dsn):
         # The actual mechanism ADR-011 fixes: if this ever comes back true, FORCE ROW LEVEL
         # SECURITY is the only thing standing between procureiq_app and every other tenant's data.
-        with psycopg.connect(admin_dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
+        with psycopg.connect(admin_dsn) as conn, conn.cursor() as cur:
+            cur.execute(
+                """
                     SELECT c.relname FROM pg_class c
                     JOIN pg_roles r ON r.oid = c.relowner
                     WHERE r.rolname = 'procureiq_app' AND c.relname = ANY(%s)
                     """,
-                    (list(TENANT_SCOPED_TABLES),),
-                )
-                owned = [row[0] for row in cur.fetchall()]
+                (list(TENANT_SCOPED_TABLES),),
+            )
+            owned = [row[0] for row in cur.fetchall()]
         assert owned == [], f"procureiq_app owns tables it should not: {owned}"
 
     def test_role_cannot_update_or_delete_audit_logs(self, app_dsn):
@@ -339,10 +336,9 @@ class TestCrossTenantIsolation:
         # behavior in the policy is supposed to guarantee. Worth its own explicit test rather
         # than an assumption.
         _insert_org_and_supplier(app_dsn, "RLS Test Org C", "RLS Test Supplier C")
-        with psycopg.connect(app_dsn) as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT legal_name FROM suppliers")
-                rows = cur.fetchall()
+        with psycopg.connect(app_dsn) as conn, conn.cursor() as cur:
+            cur.execute("SELECT legal_name FROM suppliers")
+            rows = cur.fetchall()
         assert rows == []
 
     def test_cross_tenant_update_is_blocked_not_just_select(self, app_dsn):
@@ -478,11 +474,10 @@ class TestConcurrentSessionIsolation:
 
         # +1 per org for the seed supplier _insert_org_and_supplier already created.
         for org_id, _ in orgs:
-            with psycopg.connect(app_dsn) as conn:
-                with conn.cursor() as cur:
-                    cur.execute(f"SET LOCAL app.current_org_id = '{org_id}'")
-                    cur.execute("SELECT count(*) FROM suppliers")
-                    count = cur.fetchone()[0]
+            with psycopg.connect(app_dsn) as conn, conn.cursor() as cur:
+                cur.execute(f"SET LOCAL app.current_org_id = '{org_id}'")
+                cur.execute("SELECT count(*) FROM suppliers")
+                count = cur.fetchone()[0]
             assert count == inserts_per_org + 1, (
                 f"org {org_id} has {count} supplier rows, expected {inserts_per_org + 1} - "
                 f"a concurrent write race either dropped or leaked rows across organisations"

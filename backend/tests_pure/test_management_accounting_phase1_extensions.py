@@ -46,13 +46,13 @@ class TestCalculateGmroi(unittest.TestCase):
         self.assertAlmostEqual(float(gmroi), 2.98, places=2)
 
     def test_zero_average_inventory_returns_none_not_a_divide_by_zero_error(self):
-        result = calculate_gmroi(gross_margin=Decimal("100000"), average_inventory_value=Decimal("0"))
+        result = calculate_gmroi(gross_margin=Decimal(100000), average_inventory_value=Decimal(0))
         self.assertIsNone(result)
 
     def test_negative_gross_margin_is_not_clamped_to_zero(self):
         # A genuinely loss-making period must show a negative GMROI, not a floored 0 - same
         # "never hide a bad number" discipline as calculate_customer_net_margin.
-        result = calculate_gmroi(gross_margin=Decimal("-50000"), average_inventory_value=Decimal("100000"))
+        result = calculate_gmroi(gross_margin=Decimal(-50000), average_inventory_value=Decimal(100000))
         self.assertLess(result, 0)
 
 
@@ -69,14 +69,14 @@ class TestCalculateAllocationVariance(unittest.TestCase):
         # anywhere close to weight-proportionally.
         result = calculate_allocation_variance(
             entity_activity_volume=Decimal("94284.424"), activity_based_rate=Decimal("1.0370"),
-            currently_allocated_cost=Decimal("28157"), is_fallback_rate=False,
+            currently_allocated_cost=Decimal(28157), is_fallback_rate=False,
         )
         # activity-based cost ~= 94284.424 * 1.0370 = 97,776.90 (approx, real weight * real rate)
         self.assertAlmostEqual(float(result["activity_based_cost"]), 97776.90, delta=5)
         self.assertTrue(result["is_undercosted"])
         # variance = currently_allocated - activity_based (negative = undercosted, i.e. currently
         # paying LESS than a weight-based method would say, meaning other routes subsidize it)
-        self.assertLess(result["variance"], Decimal("-69000"))
+        self.assertLess(result["variance"], Decimal(-69000))
 
     def test_a_light_route_getting_the_averaged_fallback_rate_is_overcosted(self):
         # CAA 156344, Cape Town: real weight 25,997.048kg, but got the R33,316.2753846154
@@ -89,15 +89,15 @@ class TestCalculateAllocationVariance(unittest.TestCase):
         # activity-based cost ~= 25997.048 * 1.0370 = 26,958.94
         self.assertAlmostEqual(float(result["activity_based_cost"]), 26958.94, delta=5)
         self.assertFalse(result["is_undercosted"])
-        self.assertGreater(result["variance"], Decimal("6000"))
+        self.assertGreater(result["variance"], Decimal(6000))
 
     def test_zero_activity_based_rate_returns_none_not_a_divide_by_zero_error(self):
         # Not a real division here, but a zero rate (e.g. an empty cost pool) makes the
         # comparison meaningless, not zero - consistent with allocate_activity_cost's own
         # zero-denominator handling elsewhere in this module.
         result = calculate_allocation_variance(
-            entity_activity_volume=Decimal("100"), activity_based_rate=Decimal("0"),
-            currently_allocated_cost=Decimal("500"), is_fallback_rate=False,
+            entity_activity_volume=Decimal(100), activity_based_rate=Decimal(0),
+            currently_allocated_cost=Decimal(500), is_fallback_rate=False,
         )
         self.assertIsNone(result)
 
@@ -109,12 +109,12 @@ class TestCalculateAllocationVariance(unittest.TestCase):
         shocked_rate = Decimal("1.0370") * Decimal("1.20")  # [DEMO] +20% fuel shock applied to the real rate
         result = calculate_allocation_variance(
             entity_activity_volume=Decimal("94284.424"),  # real CAA 127155 weight
-            activity_based_rate=shocked_rate, currently_allocated_cost=Decimal("28157"),  # real current allocation
+            activity_based_rate=shocked_rate, currently_allocated_cost=Decimal(28157),  # real current allocation
             is_fallback_rate=False,
         )
         baseline = calculate_allocation_variance(
             entity_activity_volume=Decimal("94284.424"), activity_based_rate=Decimal("1.0370"),
-            currently_allocated_cost=Decimal("28157"), is_fallback_rate=False,
+            currently_allocated_cost=Decimal(28157), is_fallback_rate=False,
         )
         # The shock must widen the undercosting gap, not narrow it - a real sanity check on the
         # simulation's direction, not just that it runs without error.
@@ -172,7 +172,7 @@ class TestAllocationVarianceConfidenceFlag(unittest.TestCase):
         # is_fallback_rate=False must now be explicitly stated, same as the True case above.
         result = calculate_allocation_variance(
             entity_activity_volume=Decimal("94284.424"), activity_based_rate=Decimal("1.0370"),
-            currently_allocated_cost=Decimal("28157"), is_fallback_rate=False,
+            currently_allocated_cost=Decimal(28157), is_fallback_rate=False,
         )
         self.assertEqual(result["rate_confidence"], "matched")
 
@@ -188,7 +188,7 @@ class TestFutureReplacementCostExposure(unittest.TestCase):
     def test_rising_replacement_cost_is_a_positive_adverse_exposure(self):
         # [DEMO]: replacement cost R145/unit vs recorded MAC R120/unit, 10,000 units on hand.
         result = calculate_future_replacement_exposure(
-            quantity_on_hand=Decimal("10000"),
+            quantity_on_hand=Decimal(10000),
             current_replacement_unit_cost=Decimal("145.00"), recorded_mac_unit_cost=Decimal("120.00"),
         )
         self.assertEqual(result["exposure_per_unit"], Decimal("25.0000"))
@@ -200,7 +200,7 @@ class TestFutureReplacementCostExposure(unittest.TestCase):
         # would be the same "never clamp away a real number" failure this whole engine avoids
         # everywhere else (calculate_customer_net_margin, calculate_allocation_variance).
         result = calculate_future_replacement_exposure(
-            quantity_on_hand=Decimal("10000"),
+            quantity_on_hand=Decimal(10000),
             current_replacement_unit_cost=Decimal("110.00"), recorded_mac_unit_cost=Decimal("120.00"),
         )
         self.assertEqual(result["total_exposure"], Decimal("-100000.0000"))
@@ -211,8 +211,8 @@ class TestFutureReplacementCostExposure(unittest.TestCase):
         # checked here so a future caller cannot accidentally wire this into
         # calculate_customer_net_margin/calculate_working_capital_metrics by matching a key name.
         result = calculate_future_replacement_exposure(
-            quantity_on_hand=Decimal("100"), current_replacement_unit_cost=Decimal("10"),
-            recorded_mac_unit_cost=Decimal("10"),
+            quantity_on_hand=Decimal(100), current_replacement_unit_cost=Decimal(10),
+            recorded_mac_unit_cost=Decimal(10),
         )
         forbidden_keys = {"cogs", "cost_of_goods_sold", "inventory_value", "net_margin", "dio", "dpo", "ccc"}
         self.assertEqual(set(result.keys()) & forbidden_keys, set())
@@ -220,7 +220,7 @@ class TestFutureReplacementCostExposure(unittest.TestCase):
     def test_demo_aggregate_exposure_against_the_real_mac_control_total_is_flagged_when_material(self):
         # [DEMO] aggregate exposure figure against the REAL R21,895,070.82 control total.
         is_material = flag_replacement_cost_divergence(
-            aggregate_replacement_exposure=Decimal("2500000"),
+            aggregate_replacement_exposure=Decimal(2500000),
             mac_control_total=Decimal("21895070.82"), materiality_threshold_pct=Decimal("0.05"),
         )
         # 2,500,000 / 21,895,070.82 = 11.4% > 5% threshold
@@ -228,15 +228,15 @@ class TestFutureReplacementCostExposure(unittest.TestCase):
 
     def test_demo_small_aggregate_exposure_against_the_real_control_total_is_not_flagged(self):
         is_material = flag_replacement_cost_divergence(
-            aggregate_replacement_exposure=Decimal("50000"),
+            aggregate_replacement_exposure=Decimal(50000),
             mac_control_total=Decimal("21895070.82"), materiality_threshold_pct=Decimal("0.05"),
         )
         self.assertFalse(is_material)
 
     def test_zero_control_total_is_a_data_gap_not_a_divergence_signal(self):
         is_material = flag_replacement_cost_divergence(
-            aggregate_replacement_exposure=Decimal("50000"),
-            mac_control_total=Decimal("0"), materiality_threshold_pct=Decimal("0.05"),
+            aggregate_replacement_exposure=Decimal(50000),
+            mac_control_total=Decimal(0), materiality_threshold_pct=Decimal("0.05"),
         )
         self.assertFalse(is_material)
 
@@ -258,12 +258,12 @@ class TestFlagZeroMassRisk(unittest.TestCase):
     def test_real_wmegg_pattern_is_flagged(self):
         # WMEGG, Windmeul Large Eggs 15 Dozen: real Mass=0, real Jul-26 sales R600,317.13,
         # real line count 586 - the single largest real example in the actual file.
-        self.assertTrue(flag_zero_mass_risk(recorded_mass_kg=Decimal("0"), has_recorded_sales_or_movement=True))
+        self.assertTrue(flag_zero_mass_risk(recorded_mass_kg=Decimal(0), has_recorded_sales_or_movement=True))
 
     def test_zero_mass_with_no_real_movement_is_not_flagged(self):
         # A true zero-mass line (e.g. a service/labour code with no physical weight) and no
         # real sales attached to it is not a data-quality problem - don't flag it.
-        self.assertFalse(flag_zero_mass_risk(recorded_mass_kg=Decimal("0"), has_recorded_sales_or_movement=False))
+        self.assertFalse(flag_zero_mass_risk(recorded_mass_kg=Decimal(0), has_recorded_sales_or_movement=False))
 
     def test_nonzero_recorded_mass_is_never_flagged_regardless_of_movement(self):
         self.assertFalse(flag_zero_mass_risk(recorded_mass_kg=Decimal("3.2"), has_recorded_sales_or_movement=True))
@@ -274,12 +274,12 @@ class TestFlagZeroMassRisk(unittest.TestCase):
         # (variance = full currently_allocated_cost - 0) - a wrong diagnosis for what is actually
         # a missing-data problem, not a real cost-allocation excess. This test locks in that the
         # flag catches the case before that wrong diagnosis would ever be trusted.
-        is_risky = flag_zero_mass_risk(recorded_mass_kg=Decimal("0"), has_recorded_sales_or_movement=True)
+        is_risky = flag_zero_mass_risk(recorded_mass_kg=Decimal(0), has_recorded_sales_or_movement=True)
         self.assertTrue(is_risky)
         if not is_risky:
             calculate_allocation_variance(
-                entity_activity_volume=Decimal("0"), activity_based_rate=Decimal("1.0370"),
-                currently_allocated_cost=Decimal("5000"), is_fallback_rate=False,
+                entity_activity_volume=Decimal(0), activity_based_rate=Decimal("1.0370"),
+                currently_allocated_cost=Decimal(5000), is_fallback_rate=False,
             )  # unreachable in a correct caller - the flag must gate this call
 
 
@@ -381,7 +381,7 @@ class TestTimingBridgeIsolation(unittest.TestCase):
     def test_zero_variance_is_never_refused_regardless_of_entity(self):
         # A fully reconciled position has nothing to isolate - the rule only exists to stop a
         # REAL gap being smeared across entities, not to block legitimate entity-level figures.
-        refuse_timing_bridge_allocation(variance=Decimal("0"), entity_reference="SKU004")
+        refuse_timing_bridge_allocation(variance=Decimal(0), entity_reference="SKU004")
 
     def test_empty_string_entity_reference_is_not_treated_as_no_entity(self):
         # Chaos Audit Domain 3: an empty string is `is not None` in Python - confirms this can't
@@ -434,7 +434,7 @@ class TestReplacementExposureCannotReachRealizedFigures(unittest.TestCase):
         # the type explicitly, so a future change introducing arithmetic use would need to
         # deliberately break this assertion, not slip past unnoticed.
         result = flag_replacement_cost_divergence(
-            aggregate_replacement_exposure=Decimal("2500000"),
+            aggregate_replacement_exposure=Decimal(2500000),
             mac_control_total=Decimal("21895070.82"), materiality_threshold_pct=Decimal("0.05"),
         )
         self.assertIsInstance(result, bool)
@@ -443,7 +443,7 @@ class TestReplacementExposureCannotReachRealizedFigures(unittest.TestCase):
         # [DEMO]: an extreme, 10x-normal replacement cost shock - even at this magnitude, the
         # result dict's shape does not change, and still cannot be mistaken for a realized figure.
         result = calculate_future_replacement_exposure(
-            quantity_on_hand=Decimal("50000"),
+            quantity_on_hand=Decimal(50000),
             current_replacement_unit_cost=Decimal("500.00"),  # [DEMO] extreme shock
             recorded_mac_unit_cost=Decimal("50.00"),  # [DEMO]
         )

@@ -9,14 +9,17 @@ Calls the service directly via the db_session fixture rather than through an HTT
 ingestion API route exists yet for these two tables (this phase is the service/pipeline layer
 only - a route is a separate, later piece of work).
 """
-from decimal import Decimal
 from datetime import date
+from decimal import Decimal
 
 import pytest
 
 from app.core.exceptions import ConflictError, ValidationFailedError
 from app.core.security import decode_access_token
-from app.services.working_capital_service import ingest_aging_snapshot, ingest_working_capital_snapshot
+from app.services.working_capital_service import (
+    ingest_aging_snapshot,
+    ingest_working_capital_snapshot,
+)
 
 
 async def _register_org(client, email: str, org_name: str) -> tuple[str, int, int]:
@@ -51,9 +54,9 @@ class TestWorkingCapitalPeriodLocking:
         _, org_id, user_id = await _register_org(client, "wc-conflict@example.com", "WC Conflict Org")
         kwargs = dict(
             organisation_id=org_id, user_id=user_id, as_of_date=date(2026, 8, 31),
-            accounts_receivable=Decimal("100000"), accounts_payable=Decimal("50000"),
-            inventory_value=Decimal("30000"), cash_balance=Decimal("10000"),
-            annualized_revenue=Decimal("1000000"), annualized_cogs=Decimal("700000"),
+            accounts_receivable=Decimal(100000), accounts_payable=Decimal(50000),
+            inventory_value=Decimal(30000), cash_balance=Decimal(10000),
+            annualized_revenue=Decimal(1000000), annualized_cogs=Decimal(700000),
         )
         await ingest_working_capital_snapshot(db_session, **kwargs)
         with pytest.raises(ConflictError):
@@ -63,12 +66,12 @@ class TestWorkingCapitalPeriodLocking:
         _, org_id, user_id = await _register_org(client, "wc-correction@example.com", "WC Correction Org")
         kwargs = dict(
             organisation_id=org_id, user_id=user_id, as_of_date=date(2026, 8, 31),
-            accounts_receivable=Decimal("100000"), accounts_payable=Decimal("50000"),
-            inventory_value=Decimal("30000"), cash_balance=Decimal("10000"),
-            annualized_revenue=Decimal("1000000"), annualized_cogs=Decimal("700000"),
+            accounts_receivable=Decimal(100000), accounts_payable=Decimal(50000),
+            inventory_value=Decimal(30000), cash_balance=Decimal(10000),
+            annualized_revenue=Decimal(1000000), annualized_cogs=Decimal(700000),
         )
         original = await ingest_working_capital_snapshot(db_session, **kwargs)
-        corrected_kwargs = {**kwargs, "accounts_receivable": Decimal("105000")}
+        corrected_kwargs = {**kwargs, "accounts_receivable": Decimal(105000)}
         corrected = await ingest_working_capital_snapshot(db_session, is_correction=True, **corrected_kwargs)
         assert corrected.corrects_id == original.id
         assert corrected.id != original.id
@@ -79,7 +82,7 @@ class TestAgingPeriodLocking:
         # debtors and creditors are independent ledger_types - ingesting both for the same date
         # must never conflict with each other, only within the same ledger_type.
         _, org_id, user_id = await _register_org(client, "aging-both@example.com", "Aging Both Org")
-        invoices = [{"amount": Decimal("1000"), "days_overdue": 10}]
+        invoices = [{"amount": Decimal(1000), "days_overdue": 10}]
         debtors = await ingest_aging_snapshot(
             db_session, organisation_id=org_id, user_id=user_id, as_of_date=date(2026, 8, 31),
             ledger_type="debtors", invoices=invoices,
@@ -95,7 +98,7 @@ class TestAgingPeriodLocking:
         _, org_id, user_id = await _register_org(client, "aging-conflict@example.com", "Aging Conflict Org")
         kwargs = dict(
             organisation_id=org_id, user_id=user_id, as_of_date=date(2026, 8, 31),
-            ledger_type="debtors", invoices=[{"amount": Decimal("1000"), "days_overdue": 10}],
+            ledger_type="debtors", invoices=[{"amount": Decimal(1000), "days_overdue": 10}],
         )
         await ingest_aging_snapshot(db_session, **kwargs)
         with pytest.raises(ConflictError):
@@ -118,9 +121,9 @@ class TestAgingPeriodLocking:
             db_session, organisation_id=org_id, user_id=user_id, as_of_date=date(2026, 8, 31),
             ledger_type="debtors",
             invoices=[
-                {"amount": Decimal("200000"), "days_overdue": 10}, {"amount": Decimal("150000"), "days_overdue": 35},
-                {"amount": Decimal("100000"), "days_overdue": 65}, {"amount": Decimal("50000"), "days_overdue": 95},
-                {"amount": Decimal("25000"), "days_overdue": 130},
+                {"amount": Decimal(200000), "days_overdue": 10}, {"amount": Decimal(150000), "days_overdue": 35},
+                {"amount": Decimal(100000), "days_overdue": 65}, {"amount": Decimal(50000), "days_overdue": 95},
+                {"amount": Decimal(25000), "days_overdue": 130},
             ],
         )
         assert snapshot.current_balance == Decimal("200000.0000")
@@ -144,16 +147,16 @@ class TestPeriodLockIsOrganisationScoped:
         _, org_b, user_b = await _register_org(client, "wc-scope-b@example.com", "WC Scope Org B")
         await ingest_working_capital_snapshot(
             db_session, organisation_id=org_a, user_id=user_a, as_of_date=date(2026, 8, 31),
-            accounts_receivable=Decimal("100000"), accounts_payable=Decimal("50000"),
-            inventory_value=Decimal("30000"), cash_balance=Decimal("10000"),
-            annualized_revenue=Decimal("1000000"), annualized_cogs=Decimal("700000"),
+            accounts_receivable=Decimal(100000), accounts_payable=Decimal(50000),
+            inventory_value=Decimal(30000), cash_balance=Decimal(10000),
+            annualized_revenue=Decimal(1000000), annualized_cogs=Decimal(700000),
         )
         # Org B ingesting for the SAME date must not conflict with Org A's snapshot - the
         # period-lock query is scoped per-organisation, not global.
         snapshot_b = await ingest_working_capital_snapshot(
             db_session, organisation_id=org_b, user_id=user_b, as_of_date=date(2026, 8, 31),
-            accounts_receivable=Decimal("999999"), accounts_payable=Decimal("1"),
-            inventory_value=Decimal("1"), cash_balance=Decimal("1"),
-            annualized_revenue=Decimal("1"), annualized_cogs=Decimal("1"),
+            accounts_receivable=Decimal(999999), accounts_payable=Decimal(1),
+            inventory_value=Decimal(1), cash_balance=Decimal(1),
+            annualized_revenue=Decimal(1), annualized_cogs=Decimal(1),
         )
         assert snapshot_b.corrects_id is None

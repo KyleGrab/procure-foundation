@@ -7,11 +7,10 @@ covered by tests/test_working_capital_ingestion.py instead - not duplicated here
 from __future__ import annotations
 
 import unittest
-from decimal import Decimal
 
 from app.ingestion.aging_validation import validate_aging_rows
-from app.ingestion.working_capital_validation import validate_working_capital_row
 from app.ingestion.validation import IssueSeverity
+from app.ingestion.working_capital_validation import validate_working_capital_row
 
 
 class TestWorkingCapitalRowValidation(unittest.TestCase):

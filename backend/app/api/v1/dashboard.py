@@ -11,7 +11,7 @@ from app.analytics.contract_calculations import ContractStatus
 from app.core.constants import Permission
 from app.core.permissions import require_permission
 from app.core.security import AccessTokenClaims
-from app.db.models import Contract, RebatePeriodActual, RebateAgreement, SupplierConsolidationFlag
+from app.db.models import Contract, RebateAgreement, RebatePeriodActual, SupplierConsolidationFlag
 from app.db.session import get_db
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])

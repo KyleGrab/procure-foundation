@@ -46,7 +46,7 @@ def build_negotiation_brief_context(
     supplier: Supplier, lines: list[PriceReviewLine], weighted_increase_pct: Decimal | None,
 ) -> NegotiationBriefContext:
     impacted = [l for l in lines if l.annual_impact is not None]
-    annual_spend = sum((Decimal(str(l.annual_impact)) for l in impacted), Decimal("0"))
+    annual_spend = sum((Decimal(str(l.annual_impact)) for l in impacted), Decimal(0))
     top_impacts = sorted(impacted, key=lambda l: -abs(Decimal(str(l.annual_impact))))[:10]
     targeted = [l for l in lines if l.target_price is not None]
 
@@ -87,7 +87,7 @@ async def build_negotiation_brief_context_from_spend(
         db, organisation_id=organisation_id, supplier_id=supplier.id
     )
     top_items: list[SpendItem] = items[:10]
-    annual_spend = sum((i.amount for i in items), Decimal("0"))
+    annual_spend = sum((i.amount for i in items), Decimal(0))
 
     contract_result = await db.execute(
         select(Contract.rebate_terms_summary, Contract.sla_terms_summary)

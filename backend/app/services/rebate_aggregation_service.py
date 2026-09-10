@@ -17,8 +17,14 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.analytics.rebate_calculations import aggregate_transactions_for_period, EntrySource
-from app.db.models import PurchaseInvoice, PurchaseInvoiceLine, PurchaseTransaction, RebateAgreement, RebatePeriodActual
+from app.analytics.rebate_calculations import EntrySource, aggregate_transactions_for_period
+from app.db.models import (
+    PurchaseInvoice,
+    PurchaseInvoiceLine,
+    PurchaseTransaction,
+    RebateAgreement,
+    RebatePeriodActual,
+)
 from app.services.rebate_service import recalculate_expected
 
 
@@ -101,7 +107,7 @@ async def _invoice_tuples(
         .where(PurchaseInvoice.corrects_id.is_(None))  # superseded invoices excluded from totals
     )
     return [
-        (Decimal(str(net_amount)), Decimal(str(qty)) if qty is not None else Decimal("0"), invoice_date)
+        (Decimal(str(net_amount)), Decimal(str(qty)) if qty is not None else Decimal(0), invoice_date)
         for net_amount, qty, invoice_date in result.all()
     ]
 
@@ -115,6 +121,6 @@ async def _transaction_tuples(
         .where(PurchaseTransaction.corrects_id.is_(None))
     )
     return [
-        (Decimal(str(amount)), Decimal(str(qty)) if qty is not None else Decimal("0"), txn_date)
+        (Decimal(str(amount)), Decimal(str(qty)) if qty is not None else Decimal(0), txn_date)
         for amount, qty, txn_date in result.all()
     ]

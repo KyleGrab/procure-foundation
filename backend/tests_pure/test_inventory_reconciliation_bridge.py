@@ -59,7 +59,7 @@ class TestValidateReconciliationBridgeCompleteness(unittest.TestCase):
     def test_zero_bridge_with_matching_subledger_is_trivially_fully_explained(self):
         # No bridge needed at all - sub-ledger already equals control total exactly.
         result = validate_reconciliation_bridge_completeness(
-            control_total=REAL_CONTROL_TOTAL, raw_subledger_total=REAL_CONTROL_TOTAL, bridge_total=Decimal("0"),
+            control_total=REAL_CONTROL_TOTAL, raw_subledger_total=REAL_CONTROL_TOTAL, bridge_total=Decimal(0),
         )
         self.assertTrue(result["is_fully_explained"])
 

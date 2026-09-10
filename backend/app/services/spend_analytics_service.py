@@ -20,8 +20,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.analytics.spend_analytics import (
     ABCResult,
     ParetoResult,
-    PriceObservation,
     PriceConsistencyResult,
+    PriceObservation,
     SpendItem,
     aggregate_spend,
     calculate_abc_classification,
@@ -167,7 +167,7 @@ async def get_month_over_month_trend(db: AsyncSession, *, organisation_id: int):
         .where(PurchaseInvoice.organisation_id == organisation_id)
         .where(PurchaseInvoice.corrects_id.is_(None))
     )
-    monthly: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
+    monthly: dict[str, Decimal] = defaultdict(lambda: Decimal(0))
     for invoice_date, amount in invoice_result.all():
         monthly[invoice_date.strftime("%Y-%m")] += Decimal(str(amount))
 

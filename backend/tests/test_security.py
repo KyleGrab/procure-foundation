@@ -1,10 +1,12 @@
 """Unit tests for password hashing and JWT round-trip - no DB needed."""
-import time
 
-import pytest
 
-from app.core.exceptions import AuthenticationError
-from app.core.security import create_access_token, decode_access_token, hash_password, verify_password
+from app.core.security import (
+    create_access_token,
+    decode_access_token,
+    hash_password,
+    verify_password,
+)
 
 
 def test_password_hash_roundtrip():

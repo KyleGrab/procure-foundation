@@ -96,7 +96,7 @@ def build_procurement_lens_graph(
             metric_value=supplier.total_spend, status=NodeStatus.POSITIVE, trend=None,
             details={"category": category_key},
         ))
-        category_totals[category_key] = category_totals.get(category_key, Decimal("0")) + supplier.total_spend
+        category_totals[category_key] = category_totals.get(category_key, Decimal(0)) + supplier.total_spend
         edges.append(CanvasEdge(
             id=f"{supplier.public_id}->category:{category_key}", source_id=supplier.public_id,
             target_id=f"category:{category_key}", status=NodeStatus.POSITIVE,
@@ -126,7 +126,7 @@ def build_procurement_lens_graph(
         node_id = f"contract:{renewal.contract_public_id}"
         nodes.append(CanvasNode(
             id=node_id, node_type="contract_renewal", label=renewal.title,
-            metric_value=Decimal("0"),
+            metric_value=Decimal(0),
             status=NodeStatus.CRITICAL if renewal.status == "notice_period_open" else NodeStatus.WARNING,
             trend=None, details={"expiry_date": renewal.expiry_date.isoformat(), "status": renewal.status},
         ))
@@ -257,7 +257,7 @@ def _wc_node(node_id: str, label: str, value: Decimal | None, variance: Decimal 
         status = NodeStatus.CRITICAL
     return CanvasNode(
         id=node_id, node_type="working_capital_metric", label=label,
-        metric_value=value if value is not None else Decimal("0"), status=status, trend=None,
+        metric_value=value if value is not None else Decimal(0), status=status, trend=None,
         details={
             "value_days": str(value) if value is not None else None,
             "formula": _WC_FORMULAS.get(node_id),
@@ -290,13 +290,13 @@ def build_management_lens_graph(summary: ManagementSummaryInput) -> CanvasGraph:
             trend=None, details={},
         ),
         CanvasNode(id="working_capital_summary", node_type="working_capital_summary", label="Working Capital Summary",
-                   metric_value=Decimal("0"), status=NodeStatus.POSITIVE, trend=None, details={}),
+                   metric_value=Decimal(0), status=NodeStatus.POSITIVE, trend=None, details={}),
         _wc_node("node-dso", "Days Sales Outstanding", summary.dso, summary.dso_variance),
         _wc_node("node-dio", "Days Inventory Outstanding", summary.dio, summary.dio_variance),
         _wc_node("node-dpo", "Days Payables Outstanding", summary.dpo, summary.dpo_variance),
         CanvasNode(
             id="node-ccc", node_type="cash_conversion_cycle", label="Cash Conversion Cycle",
-            metric_value=summary.ccc if summary.ccc is not None else Decimal("0"),
+            metric_value=summary.ccc if summary.ccc is not None else Decimal(0),
             status=(
                 NodeStatus.POSITIVE if summary.ccc is None or summary.ccc <= 60
                 else NodeStatus.WARNING if summary.ccc <= 90 else NodeStatus.CRITICAL

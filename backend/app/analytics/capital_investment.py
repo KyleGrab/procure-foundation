@@ -30,9 +30,9 @@ def round_rate(value: Decimal) -> Decimal:
 
 
 def _npv_at_rate(rate: Decimal, cash_flows: list[Decimal]) -> Decimal:
-    total = Decimal("0")
+    total = Decimal(0)
     for t, cf in enumerate(cash_flows):
-        total += cf / (Decimal("1") + rate) ** t
+        total += cf / (Decimal(1) + rate) ** t
     return total
 
 
@@ -81,7 +81,7 @@ def calculate_irr(
     if _count_sign_changes(cash_flows) != 1:
         return None
 
-    low, high = Decimal("-0.9999"), Decimal("100")
+    low, high = Decimal("-0.9999"), Decimal(100)
     npv_low, npv_high = _npv_at_rate(low, cash_flows), _npv_at_rate(high, cash_flows)
     if npv_low * npv_high > 0:
         return None
@@ -115,9 +115,9 @@ def calculate_discounted_payback_period(discount_rate: Decimal, cash_flows: list
     if discount_rate <= 0:
         raise ValueError(f"discount_rate must be positive, got {discount_rate}")
 
-    cumulative = Decimal("0")
+    cumulative = Decimal(0)
     for t, cf in enumerate(cash_flows):
-        discounted_cf = cf / (Decimal("1") + discount_rate) ** t
+        discounted_cf = cf / (Decimal(1) + discount_rate) ** t
         previous_cumulative = cumulative
         cumulative += discounted_cf
         if t > 0 and previous_cumulative < 0 <= cumulative:
