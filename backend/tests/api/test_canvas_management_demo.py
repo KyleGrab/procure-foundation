@@ -12,7 +12,10 @@ not executed in this sandbox.
 from decimal import Decimal
 
 import pytest
+import pytest_asyncio
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from app.core.config import get_settings
 from app.db.seeds.management_accounting_demo import seed_management_accounting_demo
 
 EXPECTED_NODE_IDS = {
@@ -21,9 +24,24 @@ EXPECTED_NODE_IDS = {
 }
 
 
-@pytest.fixture
-async def seeded_demo(db_session):
-    return await seed_management_accounting_demo(db_session)
+@pytest_asyncio.fixture(scope="module")
+async def seeded_demo():
+    """
+    Module-scoped, not function-scoped: seed_management_accounting_demo always seeds the same
+    fixed DEMO_EMAIL/DEMO_ORG_NAME (one source of truth for the demo numbers - see that module's
+    docstring). Every test in this file only reads the resulting graph via the real HTTP route;
+    none of them mutate the seeded rows, so seeding once per module and sharing the result is
+    safe. The previous function-scoped fixture re-ran the seed for every test in this file,
+    which hit a real users.email unique-constraint collision on the second test onward. Uses its
+    own admin-connection engine (same database_url db_session uses) rather than depending on the
+    function-scoped db_session fixture, since a module-scoped fixture can't depend on one.
+    """
+    engine = create_async_engine(get_settings().database_url)
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with session_factory() as session:
+        result = await seed_management_accounting_demo(session)
+    await engine.dispose()
+    return result
 
 
 async def _login(client, email: str, password: str) -> str:

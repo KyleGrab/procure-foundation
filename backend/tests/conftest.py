@@ -15,21 +15,78 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://procureiq:procureiq@localhost:5432/procureiq_test")
 os.environ.setdefault("DATABASE_URL_SYNC", "postgresql+psycopg://procureiq:procureiq@localhost:5432/procureiq_test")
+# ADR-011: app/db/session.py (imported below via app.main) connects as procureiq_app, never as
+# the admin role above - this must be set too or Settings() fails at import time before any test
+# collects. Same dev-only credential alembic/versions/0004_least_privilege_app_role.py creates
+# and docker-compose.yml's backend/worker services already use.
+os.environ.setdefault(
+    "DATABASE_URL_APP",
+    "postgresql+asyncpg://procureiq_app:procureiq_app_dev_only_rotate_in_production@localhost:5432/procureiq_test",
+)
 os.environ.setdefault("SECRET_KEY", "test-secret-key-not-for-production-use-only")
 
-from app.db.base import Base  # noqa: E402
 from app.main import app  # noqa: E402
 
 
-@pytest_asyncio.fixture(scope="session", autouse=True)
-async def _prepare_schema():
+def _admin_maintenance_dsn(database_url_sync: str) -> str:
+    """Bare 'postgresql://' DSN (psycopg wants this, not SQLAlchemy's 'postgresql+psycopg://'
+    prefix) pointed at Postgres's 'postgres' maintenance database - the one database guaranteed
+    to exist, and the one you must connect to in order to DROP/CREATE the actual target database
+    (a session can't drop the database it's connected to)."""
+    plain = database_url_sync.replace("postgresql+psycopg://", "postgresql://", 1)
+    prefix, _, _dbname = plain.rpartition("/")
+    return f"{prefix}/postgres"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _prepare_schema():
+    """
+    Real `alembic upgrade head`, not Base.metadata.create_all(): create_all only creates tables
+    from the ORM's metadata - it never runs the raw op.execute() DDL every migration also carries
+    (CREATE ROLE procureiq_app, GRANTs, ENABLE/FORCE ROW LEVEL SECURITY, triggers, extensions -
+    see e.g. alembic/versions/0004_least_privilege_app_role.py). Every test in this suite
+    ultimately depends on procureiq_app existing and being correctly privileged/RLS-forced
+    (app/db/session.py connects as procureiq_app, never as the admin role - ADR-011), so the test
+    database has to go through the exact same migration chain production does, not a schema-only
+    shortcut.
+
+    Deliberately a plain (non-async) fixture: DROP/CREATE DATABASE via a plain psycopg connection,
+    then `alembic upgrade head` as a subprocess. Neither touches an asyncio event loop, so this
+    session-scoped setup step shares no loop-bound state with the per-test async fixtures below.
+
+    Fresh disposable database: dropped and recreated every session, never an accumulated/ambient
+    database left over from a previous run.
+    """
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    import psycopg
+    from psycopg import sql
+
     from app.core.config import get_settings
 
-    engine = create_async_engine(get_settings().database_url)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    settings = get_settings()
+    db_name = settings.database_url_sync.rsplit("/", 1)[-1]
+
+    with psycopg.connect(_admin_maintenance_dsn(settings.database_url_sync), autocommit=True) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+                "WHERE datname = %s AND pid <> pg_backend_pid()",
+                (db_name,),
+            )
+            cur.execute(sql.SQL("DROP DATABASE IF EXISTS {}").format(sql.Identifier(db_name)))
+            cur.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(db_name)))
+
+    backend_root = Path(__file__).resolve().parent.parent
+    subprocess.run(
+        [sys.executable, "-m", "alembic", "upgrade", "head"],
+        cwd=backend_root,
+        env={**os.environ, "DATABASE_URL": settings.database_url, "DATABASE_URL_SYNC": settings.database_url_sync},
+        check=True,
+    )
     yield
-    await engine.dispose()
 
 
 @pytest_asyncio.fixture

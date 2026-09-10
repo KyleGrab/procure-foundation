@@ -55,6 +55,15 @@ strict = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+# Without an explicit loop scope, pytest-asyncio defaults to a fresh event loop per test
+# function. tests/conftest.py's session-scoped `_prepare_schema` fixture (and the process-wide
+# `app.db.session._engine` created at import time) both outlive any single test's loop, so their
+# pooled asyncpg connections end up bound to a loop that a later test's fresh loop has already
+# closed - "Task ... attached to a different loop". Session-scoping the loop itself (test-only;
+# does not touch app/db/session.py's engine/session architecture) makes the loop's lifetime match
+# what these fixtures already assume.
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
 markers = [
     """integration: requires a real, live PostgreSQL database - never runs against SQLite/mocks. \
