@@ -108,27 +108,48 @@ def run_migrations(pg_container, admin_dsn):
     """
     host = pg_container.get_container_host_ip()
     port = pg_container.get_exposed_port(5432)
-    os.environ["DATABASE_URL"] = f"postgresql+asyncpg://procureiq:procureiq@{host}:{port}/procureiq"
-    os.environ["DATABASE_URL_SYNC"] = f"postgresql+psycopg://procureiq:procureiq@{host}:{port}/procureiq"
-    os.environ["DATABASE_URL_APP"] = (
-        f"postgresql+asyncpg://procureiq_app:{DEV_APP_PASSWORD}@{host}:{port}/procureiq"
-    )
-    os.environ["SECRET_KEY"] = "rls-integration-test-secret"
+
+    # These four are process-global (os.environ), not fixture-local, and every test body in this
+    # file talks to the container directly via admin_dsn/app_dsn (raw psycopg) - none of them read
+    # application Settings. So the values below only need to be live for the migration call right
+    # below, not for the rest of the test session. Left assigned past this fixture, they silently
+    # repoint any *other* test module's app.db.session/get_settings() at this container - which by
+    # session end is torn down - producing exactly the "demo user disappeared" symptom in whatever
+    # unrelated test module happens to import app.main after this file's fixture has run. Save and
+    # restore around the migration call so this fixture's environment never outlives its own use.
+    _env_keys = ("DATABASE_URL", "DATABASE_URL_SYNC", "DATABASE_URL_APP", "SECRET_KEY")
+    _prior_env = {key: os.environ.get(key) for key in _env_keys}
 
     from app.core.config import get_settings
-    get_settings.cache_clear()  # env vars above must win over anything cached from an earlier test
 
-    from alembic import command
-    from alembic.config import Config
+    try:
+        os.environ["DATABASE_URL"] = f"postgresql+asyncpg://procureiq:procureiq@{host}:{port}/procureiq"
+        os.environ["DATABASE_URL_SYNC"] = f"postgresql+psycopg://procureiq:procureiq@{host}:{port}/procureiq"
+        os.environ["DATABASE_URL_APP"] = (
+            f"postgresql+asyncpg://procureiq_app:{DEV_APP_PASSWORD}@{host}:{port}/procureiq"
+        )
+        os.environ["SECRET_KEY"] = "rls-integration-test-secret"
+        get_settings.cache_clear()  # env vars above must win over anything cached from an earlier test
 
-    backend_dir = __import__("pathlib").Path(__file__).resolve().parent.parent
-    cfg = Config(str(backend_dir / "alembic.ini"))
-    cfg.set_main_option("script_location", str(backend_dir / "alembic"))
-    command.upgrade(cfg, "head")
+        from alembic import command
+        from alembic.config import Config
 
-    # A brand-new role needs a moment to be queryable in some CI/container setups - a fixed
-    # sleep is not elegant, but this fixture only runs once per test session.
-    time.sleep(0.5)
+        backend_dir = __import__("pathlib").Path(__file__).resolve().parent.parent
+        cfg = Config(str(backend_dir / "alembic.ini"))
+        cfg.set_main_option("script_location", str(backend_dir / "alembic"))
+        command.upgrade(cfg, "head")
+
+        # A brand-new role needs a moment to be queryable in some CI/container setups - a fixed
+        # sleep is not elegant, but this fixture only runs once per test session.
+        time.sleep(0.5)
+    finally:
+        for key, value in _prior_env.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+        get_settings.cache_clear()  # so a later test module's get_settings() sees the restored values
+
     yield
 
 
