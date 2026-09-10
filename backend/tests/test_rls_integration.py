@@ -383,46 +383,80 @@ class TestCrossTenantIsolation:
             conn.rollback()
 
 
+@pytest.fixture
+def rls_demo_scratch_table(admin_dsn):
+    """
+    Function-scoped, not shared across the two TestForceRlsMechanismDemonstration tests below:
+    each test gets its own fresh rls_demo_owner role + rls_demo_scratch table + policy + seed
+    rows, and both are guaranteed dropped in a finally block regardless of test outcome. A single
+    setup shared between the two test methods (the first creating what the second silently relied
+    on) made the second test fail with UndefinedTable whenever run alone - order-dependent for no
+    reason connected to what's actually being demonstrated.
+
+    rls_demo_owner is deliberately NOLOGIN NOSUPERUSER NOBYPASSRLS: ADR-011's actual point is that
+    FORCE ROW LEVEL SECURITY restricts an ordinary table owner. The admin connection here (which
+    is itself rolsuper/rolbypassrls - see admin_dsn) only ever does setup/teardown DDL; the tests
+    below SET ROLE to rls_demo_owner before reading, so the role whose visibility is measured is
+    never the superuser connection itself.
+    """
+    with psycopg.connect(admin_dsn) as conn:
+        conn.autocommit = True
+        with conn.cursor() as cur:
+            cur.execute("DROP TABLE IF EXISTS rls_demo_scratch")
+            cur.execute("DROP ROLE IF EXISTS rls_demo_owner")
+            cur.execute("CREATE ROLE rls_demo_owner NOLOGIN NOSUPERUSER NOBYPASSRLS")
+            cur.execute(
+                "CREATE TABLE rls_demo_scratch (id serial primary key, tenant_id int, value text)"
+            )
+            cur.execute("ALTER TABLE rls_demo_scratch OWNER TO rls_demo_owner")
+            cur.execute("ALTER TABLE rls_demo_scratch ENABLE ROW LEVEL SECURITY")  # no FORCE yet
+            cur.execute(
+                "CREATE POLICY t ON rls_demo_scratch USING (tenant_id = current_setting('app.demo_tenant', true)::int)"
+            )
+            cur.execute("INSERT INTO rls_demo_scratch (tenant_id, value) VALUES (1, 'secret-a'), (2, 'secret-b')")
+        try:
+            yield
+        finally:
+            with conn.cursor() as cur:
+                cur.execute("DROP TABLE IF EXISTS rls_demo_scratch")
+                cur.execute("DROP ROLE IF EXISTS rls_demo_owner")
+
+
 class TestForceRlsMechanismDemonstration:
     """
     Not testing any real application table - a throwaway scratch table demonstrating the exact
     mechanism ADR-011 fixes, so this suite proves understanding of *why* FORCE matters, not just
-    that it's present. Connects as the owning (admin) role deliberately, since that's the only
-    way to observe the difference ENABLE-without-FORCE makes.
+    that it's present. Setup/teardown connects as the admin role (see rls_demo_scratch_table
+    above); the actual read in each test below runs as rls_demo_owner, an ordinary non-superuser,
+    non-bypassrls table owner - the only role FORCE's behaviour can be observed on.
     """
 
-    def test_enable_without_force_leaks_to_the_owning_role(self, admin_dsn):
+    def test_enable_without_force_leaks_to_the_owning_role(self, admin_dsn, rls_demo_scratch_table):
         with psycopg.connect(admin_dsn) as conn:
             conn.autocommit = True
             with conn.cursor() as cur:
-                cur.execute("DROP TABLE IF EXISTS rls_demo_scratch")
-                cur.execute(
-                    "CREATE TABLE rls_demo_scratch (id serial primary key, tenant_id int, value text)"
-                )
-                cur.execute("ALTER TABLE rls_demo_scratch ENABLE ROW LEVEL SECURITY")  # no FORCE
-                cur.execute(
-                    "CREATE POLICY t ON rls_demo_scratch USING (tenant_id = current_setting('app.demo_tenant', true)::int)"
-                )
-                cur.execute("INSERT INTO rls_demo_scratch (tenant_id, value) VALUES (1, 'secret-a'), (2, 'secret-b')")
+                cur.execute("SET ROLE rls_demo_owner")
                 cur.execute("SET app.demo_tenant = '1'")
                 cur.execute("SELECT value FROM rls_demo_scratch")
                 # The owning role sees BOTH rows despite the policy - this is the exact gap
                 # ADR-011 found in the real schema, reproduced deliberately here.
                 values = {row[0] for row in cur.fetchall()}
+                cur.execute("RESET ROLE")
         assert values == {"secret-a", "secret-b"}, (
             "expected the owner to see both rows without FORCE - if this fails, Postgres's "
             "behavior here has changed and ADR-011's reasoning needs re-checking, not this test"
         )
 
-    def test_force_fixes_the_leak_for_the_same_owning_role(self, admin_dsn):
+    def test_force_fixes_the_leak_for_the_same_owning_role(self, admin_dsn, rls_demo_scratch_table):
         with psycopg.connect(admin_dsn) as conn:
             conn.autocommit = True
             with conn.cursor() as cur:
                 cur.execute("ALTER TABLE rls_demo_scratch FORCE ROW LEVEL SECURITY")
+                cur.execute("SET ROLE rls_demo_owner")
                 cur.execute("SET app.demo_tenant = '1'")
                 cur.execute("SELECT value FROM rls_demo_scratch")
                 values = {row[0] for row in cur.fetchall()}
-                cur.execute("DROP TABLE rls_demo_scratch")
+                cur.execute("RESET ROLE")
         assert values == {"secret-a"}, "FORCE did not restrict the owning role - fix did not work"
 
 
