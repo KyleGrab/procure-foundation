@@ -49,21 +49,28 @@ async def _write_opportunity_measure_event(
     )).scalar_one_or_none()
     next_version = (current_max or 0) + 1
 
+    # ck_famev_genesis_old_fields_null (migration 0021): a genesis event (version 1) has no
+    # preceding event, so it must record no historical predecessor state - all old_* NULL. The
+    # parent row's placeholder value at insertion time (e.g. annual_financial_impact_status=
+    # "unknown", set only so the NOT NULL column has something to hold until this function runs)
+    # is insertion mechanics, not a real prior event, and must not be recorded as one.
+    is_genesis = next_version == 1
+
     prefix = f"{measure_code}_"
-    old_amount = getattr(locked, measure_code)
-    old_status = getattr(locked, f"{prefix}status")
-    old_source_basis = getattr(locked, f"{prefix}source_basis")
-    old_calculated_at = getattr(locked, f"{prefix}calculated_at")
+    old_amount = None if is_genesis else getattr(locked, measure_code)
+    old_status = None if is_genesis else getattr(locked, f"{prefix}status")
+    old_source_basis = None if is_genesis else getattr(locked, f"{prefix}source_basis")
+    old_calculated_at = None if is_genesis else getattr(locked, f"{prefix}calculated_at")
     if measure_code == "annual_financial_impact":
         old_approved_at = None
         old_approved_by_user_id = None
-        old_period_start = locked.annual_financial_impact_effective_from
+        old_period_start = None if is_genesis else locked.annual_financial_impact_effective_from
         old_period_end = None
     else:
-        old_approved_at = locked.realised_savings_approved_at
-        old_approved_by_user_id = locked.realised_savings_approved_by_user_id
-        old_period_start = locked.realised_savings_effective_period_start
-        old_period_end = locked.realised_savings_effective_period_end
+        old_approved_at = None if is_genesis else locked.realised_savings_approved_at
+        old_approved_by_user_id = None if is_genesis else locked.realised_savings_approved_by_user_id
+        old_period_start = None if is_genesis else locked.realised_savings_effective_period_start
+        old_period_end = None if is_genesis else locked.realised_savings_effective_period_end
 
     event = FinancialAmountStatusEvent(
         organisation_id=locked.organisation_id, opportunity_id=locked.id,

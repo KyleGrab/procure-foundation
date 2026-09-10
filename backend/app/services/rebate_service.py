@@ -57,15 +57,25 @@ async def _write_expected_amount_event(
     )).scalar_one_or_none()
     next_version = (current_max or 0) + 1
 
+    # ck_famev_genesis_old_fields_null (migration 0021): a genesis event (version 1) has no
+    # preceding event, so it must record no historical predecessor state - all old_* NULL. The
+    # parent row's placeholder value at insertion time (e.g. expected_amount_status="unknown",
+    # set only so the NOT NULL column has something to hold until this function runs) is
+    # insertion mechanics, not a real prior event, and must not be recorded as one.
+    is_genesis = next_version == 1
+
     event = FinancialAmountStatusEvent(
         organisation_id=locked.organisation_id, rebate_period_actual_id=locked.id,
         measure_code="expected_amount", event_version=next_version,
-        old_amount=locked.expected_amount, new_amount=new_amount,
-        old_status=locked.expected_amount_status, new_status=new_status,
-        old_source_basis=locked.expected_amount_source_basis, new_source_basis=new_source_basis,
-        old_calculated_at=locked.expected_amount_calculated_at, new_calculated_at=new_calculated_at,
-        old_approved_at=locked.expected_amount_approved_at, new_approved_at=new_approved_at,
-        old_approved_by_user_id=locked.expected_amount_approved_by_user_id,
+        old_amount=None if is_genesis else locked.expected_amount, new_amount=new_amount,
+        old_status=None if is_genesis else locked.expected_amount_status, new_status=new_status,
+        old_source_basis=None if is_genesis else locked.expected_amount_source_basis,
+        new_source_basis=new_source_basis,
+        old_calculated_at=None if is_genesis else locked.expected_amount_calculated_at,
+        new_calculated_at=new_calculated_at,
+        old_approved_at=None if is_genesis else locked.expected_amount_approved_at,
+        new_approved_at=new_approved_at,
+        old_approved_by_user_id=None if is_genesis else locked.expected_amount_approved_by_user_id,
         new_approved_by_user_id=new_approved_by_user_id,
         actor_user_id=actor_user_id, occurred_at=datetime.now(timezone.utc),
         change_reference=change_reference, change_reason_code=change_reason_code,
