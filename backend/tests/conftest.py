@@ -134,11 +134,25 @@ async def db_conn():
     matches how a deferred constraint trigger actually behaves (checked at COMMIT, not at the
     point of INSERT) - same reasoning as tests/test_rls_integration.py's existing raw-psycopg
     pattern, extended to async since these tests are async throughout.
+
+    Teardown rolls back rather than committing. A test proving one specific INSERT/UPDATE is
+    accepted or rejected is a narrower claim than "this whole transaction survives every OTHER
+    deferred trigger this row happens to carry" (e.g. migration 0024's parent-final-state
+    triggers, which validate a touched opportunities/rebate_period_actuals row's CURRENT state
+    unconditionally, for every governed measure, not only whichever one a given test is about).
+    A test that genuinely needs to prove a transaction commits still does so explicitly - calling
+    db_conn.commit() itself, or exiting a `.transaction()` context cleanly - independent of this
+    teardown. Rolling back also leaves no residue in the session-scoped database for a later test
+    to collide with.
     """
     import psycopg
 
-    async with await psycopg.AsyncConnection.connect(_sync_dsn_as_plain_url(), autocommit=False) as conn:
+    conn = await psycopg.AsyncConnection.connect(_sync_dsn_as_plain_url(), autocommit=False)
+    try:
         yield conn
+    finally:
+        await conn.rollback()
+        await conn.close()
 
 
 @pytest_asyncio.fixture
@@ -168,11 +182,21 @@ async def p03_seed(db_session):
     fixture runs against the FULLY-MIGRATED test database - head, including 0021 - unlike the
     separate migration-compatibility script, which deliberately never touches the ORM). Returns
     real IDs rather than hardcoded constants, since every CI run gets a genuinely fresh database.
+
+    P03-CORE-R1 (migration 0024)'s parent-final-state triggers validate the CURRENT, final
+    persisted row at commit - not just whichever statement fired them - so every governed measure
+    a parent row this fixture creates and commits carries (RebatePeriodActual.expected_amount,
+    Opportunity.annual_financial_impact, Opportunity.realised_savings) needs its own genesis event
+    and a correctly pointing current_event_id before this fixture's own commit, regardless of
+    which single measure an individual test actually exercises.
     """
+    import uuid
     from datetime import date
 
+    import sqlalchemy as sa
+
     from app.db.models import (
-        Opportunity, Organisation, OrganisationMembership, RebateAgreement, RebatePeriodActual, User,
+        Opportunity, Organisation, OrganisationMembership, RebateAgreement, RebatePeriodActual, Supplier, User,
     )
 
     org_a = Organisation(name="P-03 Test Org A", default_currency="ZAR", country="ZA")
@@ -180,15 +204,25 @@ async def p03_seed(db_session):
     db_session.add_all([org_a, org_b])
     await db_session.flush()
 
-    user = User(first_name="P03", last_name="Seed", email="p03-seed@procureiq.local",
+    # Unique per invocation: this fixture is function-scoped and commits its rows, and
+    # users.email is unique - a fixed literal collides the second time any test using p03_seed
+    # runs against the same session-scoped database.
+    user = User(first_name="P03", last_name="Seed", email=f"p03-seed-{uuid.uuid4()}@procureiq.local",
                 password_hash="not-a-real-hash-seed-only", verified=True)
     db_session.add(user)
     await db_session.flush()
     db_session.add(OrganisationMembership(user_id=user.id, organisation_id=org_a.id, role="owner", status="active"))
     await db_session.flush()
 
+    # ck_rebate_agreements_supplier_or_customer requires exactly one of supplier_id/customer_id -
+    # a minimal valid Supplier makes this buy-side agreement structurally valid without weakening
+    # the production constraint.
+    supplier = Supplier(organisation_id=org_a.id, legal_name="P-03 Test Supplier")
+    db_session.add(supplier)
+    await db_session.flush()
+
     agreement = RebateAgreement(
-        organisation_id=org_a.id, supplier_id=None, title="P-03 Test Agreement",
+        organisation_id=org_a.id, supplier_id=supplier.id, title="P-03 Test Agreement",
         rebate_type="fixed_percentage", period_type="quarterly", flat_rate_pct="0.02",
         currency="ZAR", created_by_user_id=user.id,
     )
@@ -211,22 +245,42 @@ async def p03_seed(db_session):
     db_session.add(opportunity)
     await db_session.flush()
 
-    genesis_event = await db_session.execute(
-        __import__("sqlalchemy").text(
-            "INSERT INTO financial_amount_status_events (organisation_id, rebate_period_actual_id, "
-            "measure_code, event_version, new_status, occurred_at, change_reference, change_reason_code) "
-            "VALUES (:org, :parent, 'expected_amount', 1, 'unknown', now(), 'p03_seed_fixture', 'initial_backfill') "
-            "RETURNING id"
-        ),
-        {"org": org_a.id, "parent": period_actual.id},
+    async def _genesis_event(*, rebate_period_actual_id=None, opportunity_id=None, measure_code):
+        """A version-1 event: old_* fields all NULL (ck_famev_genesis_old_fields_null), new_*
+        fields the 'unknown' branch of that measure's state-combination check - matching every
+        parent row this fixture creates, all seeded at status='unknown'. public_id is supplied
+        explicitly (gen_random_uuid()) - this is a raw INSERT bypassing the ORM's Python-side
+        UUID default, and the column is NOT NULL with no server-side default."""
+        result = await db_session.execute(
+            sa.text(
+                "INSERT INTO financial_amount_status_events (public_id, organisation_id, "
+                "rebate_period_actual_id, opportunity_id, measure_code, event_version, new_status, "
+                "occurred_at, change_reference, change_reason_code) "
+                "VALUES (gen_random_uuid(), :org, :rpa, :opp, :measure, 1, 'unknown', now(), "
+                "'p03_seed_fixture', 'initial_backfill') RETURNING id"
+            ),
+            {"org": org_a.id, "rpa": rebate_period_actual_id, "opp": opportunity_id, "measure": measure_code},
+        )
+        return result.scalar_one()
+
+    expected_amount_event_id = await _genesis_event(
+        rebate_period_actual_id=period_actual.id, measure_code="expected_amount"
     )
-    event_id = genesis_event.scalar_one()
     await db_session.execute(
-        __import__("sqlalchemy").text(
-            "UPDATE rebate_period_actuals SET expected_amount_current_event_id = :ev WHERE id = :pid"
-        ),
-        {"ev": event_id, "pid": period_actual.id},
+        sa.text("UPDATE rebate_period_actuals SET expected_amount_current_event_id = :ev WHERE id = :pid"),
+        {"ev": expected_amount_event_id, "pid": period_actual.id},
     )
+
+    afi_event_id = await _genesis_event(opportunity_id=opportunity.id, measure_code="annual_financial_impact")
+    rs_event_id = await _genesis_event(opportunity_id=opportunity.id, measure_code="realised_savings")
+    await db_session.execute(
+        sa.text(
+            "UPDATE opportunities SET annual_financial_impact_current_event_id = :afi_ev, "
+            "realised_savings_current_event_id = :rs_ev WHERE id = :oid"
+        ),
+        {"afi_ev": afi_event_id, "rs_ev": rs_event_id, "oid": opportunity.id},
+    )
+
     await db_session.commit()
 
     class Seed:
@@ -237,6 +291,6 @@ async def p03_seed(db_session):
         agreement_id = agreement.id
         period_actual_id = period_actual.id
         opportunity_id = opportunity.id
-        event_id = event_id
+        event_id = expected_amount_event_id
 
     return Seed()

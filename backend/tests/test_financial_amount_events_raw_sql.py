@@ -23,17 +23,19 @@ async def _insert_event(
     new_effective_period_start=None, new_effective_period_end=None,
     change_reference="raw_sql_test", change_reason_code="manual_estimate",
 ) -> int:
-    """Real INSERT against financial_amount_status_events - returns the new row's id."""
+    """Real INSERT against financial_amount_status_events - returns the new row's id. public_id
+    is NOT NULL with no server-side default (only the ORM's Python-side uuid.uuid4() default,
+    which a raw INSERT bypasses entirely), so it's supplied here explicitly."""
     cur = await conn.execute(
         """
         INSERT INTO financial_amount_status_events
-          (organisation_id, rebate_period_actual_id, opportunity_id, measure_code, event_version,
+          (public_id, organisation_id, rebate_period_actual_id, opportunity_id, measure_code, event_version,
            old_amount, old_status, old_source_basis, old_calculated_at, old_approved_at,
            old_approved_by_user_id, old_effective_period_start, old_effective_period_end,
            new_amount, new_status, new_source_basis, new_calculated_at, new_approved_at,
            new_approved_by_user_id, new_effective_period_start, new_effective_period_end,
            occurred_at, change_reference, change_reason_code)
-        VALUES (%s,%s,%s,%s,%s, %s,%s,%s,%s,%s, %s,%s,%s, %s,%s,%s,%s,%s, %s,%s,%s, now(),%s,%s)
+        VALUES (gen_random_uuid(), %s,%s,%s,%s,%s, %s,%s,%s,%s,%s, %s,%s,%s, %s,%s,%s,%s,%s, %s,%s,%s, now(),%s,%s)
         RETURNING id
         """,
         (organisation_id, rebate_period_actual_id, opportunity_id, measure_code, event_version,
@@ -50,13 +52,14 @@ async def _insert_event(
 async def _insert_period_actual(conn, *, organisation_id, rebate_agreement_id, entered_by_user_id) -> int:
     """Real INSERT against rebate_period_actuals - returns the new row's id. Deliberately leaves
     expected_amount_current_event_id NULL (the caller writes the genesis event and pointer
-    separately, matching how the real service layer does it)."""
+    separately, matching how the real service layer does it). public_id is NOT NULL with no
+    server-side default, so it's supplied explicitly - same reasoning as _insert_event."""
     cur = await conn.execute(
         """
         INSERT INTO rebate_period_actuals
-          (organisation_id, rebate_agreement_id, period_start, period_end, entry_source,
+          (public_id, organisation_id, rebate_agreement_id, period_start, period_end, entry_source,
            entered_by_user_id, expected_amount_status)
-        VALUES (%s, %s, '2026-04-01', '2026-06-30', 'manual', %s, 'unknown')
+        VALUES (gen_random_uuid(), %s, %s, '2026-04-01', '2026-06-30', 'manual', %s, 'unknown')
         RETURNING id
         """,
         (organisation_id, rebate_agreement_id, entered_by_user_id),
@@ -65,23 +68,111 @@ async def _insert_period_actual(conn, *, organisation_id, rebate_agreement_id, e
     return row[0]
 
 
-async def _insert_opportunity(conn, *, organisation_id, created_by_user_id) -> int:
-    """Real INSERT against opportunities - returns the new row's id. Deliberately leaves both
-    measures' current_event_id NULL, matching _insert_period_actual's same convention - the
-    caller writes genesis events and pointers separately."""
+async def _insert_opportunity(conn, *, organisation_id, created_by_user_id, seed_measure=None) -> int:
+    """Real INSERT against opportunities - returns the new row's id. public_id is NOT NULL with
+    no server-side default, so it's supplied explicitly - same reasoning as _insert_event.
+
+    Migration 0024 (P03-CORE-R1) validates the CURRENT row against BOTH governed measures
+    (annual_financial_impact, realised_savings) at every commit that touches this row - not only
+    whichever measure an individual test cares about. So every measure OTHER than `seed_measure`
+    (the one the caller is about to write its own version-1 event for) is immediately given a
+    valid 'unknown' genesis event and a correctly pointing current_event_id right here, leaving
+    ONLY `seed_measure` virgin at version 1 for the caller. seed_measure=None (the default) seeds
+    both measures - a fully 0024-valid, inert row for callers that don't need either version-1
+    slot free."""
     cur = await conn.execute(
         """
         INSERT INTO opportunities
-          (organisation_id, title, opportunity_type, status, created_by_user_id,
+          (public_id, organisation_id, title, opportunity_type, status, created_by_user_id,
            annual_financial_impact_status, realised_savings_status)
-        VALUES (%s, 'P-03 Combination Test Opportunity', 'price_increase_challenge', 'identified', %s,
+        VALUES (gen_random_uuid(), %s, 'P-03 Combination Test Opportunity', 'price_increase_challenge', 'identified', %s,
                 'unknown', 'unknown')
         RETURNING id
         """,
         (organisation_id, created_by_user_id),
     )
     row = await cur.fetchone()
-    return row[0]
+    opportunity_id = row[0]
+
+    for measure, pointer_column in (
+        ("annual_financial_impact", "annual_financial_impact_current_event_id"),
+        ("realised_savings", "realised_savings_current_event_id"),
+    ):
+        if measure == seed_measure:
+            continue
+        event_id = await _insert_event(
+            conn, organisation_id=organisation_id, opportunity_id=opportunity_id,
+            measure_code=measure, event_version=1, new_status="unknown",
+            change_reason_code="initial_backfill",
+        )
+        await conn.execute(
+            f"UPDATE opportunities SET {pointer_column} = %s WHERE id = %s",
+            (event_id, opportunity_id),
+        )
+    return opportunity_id
+
+
+async def _seed_valid_genesis(
+    conn, *, organisation_id, rebate_period_actual_id, new_status="unknown", new_amount=None,
+    new_source_basis=None, new_calculated_at=None, new_approved_at=None, new_approved_by_user_id=None,
+    change_reason_code="manual_estimate",
+) -> int:
+    """Insert a version-1 event AND immediately point + snapshot the parent row at it, in one
+    step - the full 'insert row (NULL pointer) -> genesis event -> UPDATE pointer' lifecycle
+    migration 0024's own docstring describes. A test that needs a SETTLED, 0024-valid parent
+    before building a LATER (version 2+) event on top of it calls this for the version-1 step, so
+    only that later event's own deferred trigger governs the test outcome - not an incidental
+    NULL/stale pointer left over from skipping this step (which check_rpa_expected_amount_
+    matches_event validates unconditionally, for every governed measure, at every commit)."""
+    event_id = await _insert_event(
+        conn, organisation_id=organisation_id, rebate_period_actual_id=rebate_period_actual_id,
+        event_version=1, new_status=new_status, new_amount=new_amount, new_source_basis=new_source_basis,
+        new_calculated_at=new_calculated_at, new_approved_at=new_approved_at,
+        new_approved_by_user_id=new_approved_by_user_id, change_reason_code=change_reason_code,
+    )
+    await conn.execute(
+        "UPDATE rebate_period_actuals SET expected_amount_current_event_id = %s, expected_amount = %s, "
+        "expected_amount_status = %s, expected_amount_source_basis = %s, expected_amount_calculated_at = %s, "
+        "expected_amount_approved_at = %s, expected_amount_approved_by_user_id = %s WHERE id = %s",
+        (event_id, new_amount, new_status, new_source_basis, new_calculated_at, new_approved_at,
+         new_approved_by_user_id, rebate_period_actual_id),
+    )
+    return event_id
+
+
+async def _point_opportunity_at_event(
+    conn, *, opportunity_id, measure_code, event_id, new_amount=None, new_status="unknown",
+    new_source_basis=None, new_calculated_at=None, new_approved_at=None, new_approved_by_user_id=None,
+    new_effective_period_start=None, new_effective_period_end=None,
+) -> None:
+    """UPDATE the opportunity's snapshot + pointer for `measure_code` to match `event_id`'s own
+    new_* fields - the same 'insert row -> event -> UPDATE pointer' lifecycle migration 0024's
+    own docstring describes, generalized to Opportunity's two governed measures (each with its
+    own, differently-shaped snapshot column set - annual_financial_impact has no approval fields
+    and only a single effective_from date; realised_savings has both approval fields and a full
+    effective period). Without this, migration 0024's parent-final-state trigger validates the
+    pointer unconditionally at commit and fails with 'must not be NULL at commit' before a test
+    can ever reach whatever LATER check (e.g. evidence sufficiency) it actually means to test."""
+    if measure_code == "annual_financial_impact":
+        await conn.execute(
+            "UPDATE opportunities SET annual_financial_impact_current_event_id = %s, "
+            "annual_financial_impact = %s, annual_financial_impact_status = %s, "
+            "annual_financial_impact_source_basis = %s, annual_financial_impact_calculated_at = %s, "
+            "annual_financial_impact_effective_from = %s WHERE id = %s",
+            (event_id, new_amount, new_status, new_source_basis, new_calculated_at,
+             new_effective_period_start, opportunity_id),
+        )
+    else:
+        assert measure_code == "realised_savings", measure_code
+        await conn.execute(
+            "UPDATE opportunities SET realised_savings_current_event_id = %s, realised_savings = %s, "
+            "realised_savings_status = %s, realised_savings_source_basis = %s, "
+            "realised_savings_calculated_at = %s, realised_savings_approved_at = %s, "
+            "realised_savings_approved_by_user_id = %s, realised_savings_effective_period_start = %s, "
+            "realised_savings_effective_period_end = %s WHERE id = %s",
+            (event_id, new_amount, new_status, new_source_basis, new_calculated_at, new_approved_at,
+             new_approved_by_user_id, new_effective_period_start, new_effective_period_end, opportunity_id),
+        )
 
 
 async def _next_event_version(conn, *, rebate_period_actual_id, measure_code) -> int:
@@ -154,7 +245,14 @@ async def test_legacy_unverified_rejects_any_populated_provenance(db_conn, p03_s
 
 @pytest.mark.integration
 async def test_realised_savings_estimated_is_structurally_impossible(db_conn, p03_seed):
-    with pytest.raises(Exception, match="ck_opp_rs_status_valid"):
+    """realised_savings has no 'estimated' branch in ck_opp_rs_state_combination at all - this
+    UPDATE (status only, every other field left at its prior NULL) necessarily and unavoidably
+    violates BOTH ck_opp_rs_status_valid (vocabulary) and ck_opp_rs_state_combination
+    (no matching branch) at once, on the same table, in the same statement. There is no row
+    shape that isolates one from the other, so this asserts semantic rejection by either of the
+    two constraints that structurally must both be violated together - not which one Postgres
+    happens to report first, which is not a business/test contract."""
+    with pytest.raises(Exception, match="ck_opp_rs_status_valid|ck_opp_rs_state_combination"):
         await db_conn.execute(
             "UPDATE opportunities SET realised_savings_status = 'estimated' WHERE id = %s",
             (p03_seed.opportunity_id,),
@@ -163,7 +261,10 @@ async def test_realised_savings_estimated_is_structurally_impossible(db_conn, p0
 
 @pytest.mark.integration
 async def test_annual_financial_impact_confirmed_is_structurally_impossible(db_conn, p03_seed):
-    with pytest.raises(Exception, match="ck_opp_afi_status_valid"):
+    """Mirror of the realised_savings/estimated case above - annual_financial_impact has no
+    'confirmed' branch in ck_opp_afi_state_combination, so ck_opp_afi_status_valid and
+    ck_opp_afi_state_combination are both unavoidably violated together."""
+    with pytest.raises(Exception, match="ck_opp_afi_status_valid|ck_opp_afi_state_combination"):
         await db_conn.execute(
             "UPDATE opportunities SET annual_financial_impact_status = 'confirmed' WHERE id = %s",
             (p03_seed.opportunity_id,),
@@ -187,13 +288,24 @@ async def test_realised_savings_period_start_after_end_rejected(db_conn, p03_see
 
 @pytest.mark.integration
 async def test_confirmed_reconciled_actuals_event_without_evidence_fails_at_commit(db_conn, p03_seed):
-    await _insert_event(
-        db_conn, organisation_id=p03_seed.org_id, opportunity_id=p03_seed.opportunity_id,
+    """A fresh opportunity with only realised_savings left virgin - p03_seed.opportunity_id
+    already carries its own realised_savings version-1 genesis event (needed to satisfy migration
+    0024 for p03_seed's own commit), so reusing it here for another version-1 event would collide
+    on uq_famev_opportunity_seq instead of reaching the check under test."""
+    new_id = await _fresh_opp(db_conn, p03_seed, seed_measure="realised_savings")
+    event_id = await _insert_event(
+        db_conn, organisation_id=p03_seed.org_id, opportunity_id=new_id,
         measure_code="realised_savings", event_version=1, new_status="confirmed",
         new_source_basis="reconciled_actuals", new_amount=500,
         new_approved_at="2026-06-01", new_approved_by_user_id=p03_seed.user_id,
         new_effective_period_start="2026-01-01", new_effective_period_end="2026-03-31",
         change_reason_code="evidence_received",
+    )
+    await _point_opportunity_at_event(
+        db_conn, opportunity_id=new_id, measure_code="realised_savings", event_id=event_id,
+        new_status="confirmed", new_source_basis="reconciled_actuals", new_amount=500,
+        new_approved_at="2026-06-01", new_approved_by_user_id=p03_seed.user_id,
+        new_effective_period_start="2026-01-01", new_effective_period_end="2026-03-31",
     )
     with pytest.raises(Exception, match="missing documented_baseline evidence"):
         await db_conn.commit()
@@ -201,13 +313,20 @@ async def test_confirmed_reconciled_actuals_event_without_evidence_fails_at_comm
 
 @pytest.mark.integration
 async def test_confirmed_reconciled_actuals_with_all_three_evidence_types_commits(db_conn, p03_seed):
+    new_id = await _fresh_opp(db_conn, p03_seed, seed_measure="realised_savings")
     event_id = await _insert_event(
-        db_conn, organisation_id=p03_seed.org_id, opportunity_id=p03_seed.opportunity_id,
+        db_conn, organisation_id=p03_seed.org_id, opportunity_id=new_id,
         measure_code="realised_savings", event_version=1, new_status="confirmed",
         new_source_basis="reconciled_actuals", new_amount=500,
         new_approved_at="2026-06-01", new_approved_by_user_id=p03_seed.user_id,
         new_effective_period_start="2026-01-01", new_effective_period_end="2026-03-31",
         change_reason_code="evidence_received",
+    )
+    await _point_opportunity_at_event(
+        db_conn, opportunity_id=new_id, measure_code="realised_savings", event_id=event_id,
+        new_status="confirmed", new_source_basis="reconciled_actuals", new_amount=500,
+        new_approved_at="2026-06-01", new_approved_by_user_id=p03_seed.user_id,
+        new_effective_period_start="2026-01-01", new_effective_period_end="2026-03-31",
     )
     for evidence_type, ref in (
         ("documented_baseline", "BASELINE-001"),
@@ -215,8 +334,8 @@ async def test_confirmed_reconciled_actuals_with_all_three_evidence_types_commit
         ("variance_calculation_reference", "VAR-001"),
     ):
         await db_conn.execute(
-            "INSERT INTO financial_amount_evidence (organisation_id, event_id, evidence_type, "
-            "external_reference, recorded_at) VALUES (%s, %s, %s, %s, now())",
+            "INSERT INTO financial_amount_evidence (public_id, organisation_id, event_id, evidence_type, "
+            "external_reference, recorded_at) VALUES (gen_random_uuid(), %s, %s, %s, %s, now())",
             (p03_seed.org_id, event_id, evidence_type, ref),
         )
     await db_conn.commit()
@@ -224,18 +343,25 @@ async def test_confirmed_reconciled_actuals_with_all_three_evidence_types_commit
 
 @pytest.mark.integration
 async def test_confirmed_reconciled_actuals_missing_one_of_three_evidence_types_fails(db_conn, p03_seed):
+    new_id = await _fresh_opp(db_conn, p03_seed, seed_measure="realised_savings")
     event_id = await _insert_event(
-        db_conn, organisation_id=p03_seed.org_id, opportunity_id=p03_seed.opportunity_id,
+        db_conn, organisation_id=p03_seed.org_id, opportunity_id=new_id,
         measure_code="realised_savings", event_version=1, new_status="confirmed",
         new_source_basis="reconciled_actuals", new_amount=500,
         new_approved_at="2026-06-01", new_approved_by_user_id=p03_seed.user_id,
         new_effective_period_start="2026-01-01", new_effective_period_end="2026-03-31",
         change_reason_code="evidence_received",
     )
+    await _point_opportunity_at_event(
+        db_conn, opportunity_id=new_id, measure_code="realised_savings", event_id=event_id,
+        new_status="confirmed", new_source_basis="reconciled_actuals", new_amount=500,
+        new_approved_at="2026-06-01", new_approved_by_user_id=p03_seed.user_id,
+        new_effective_period_start="2026-01-01", new_effective_period_end="2026-03-31",
+    )
     for evidence_type, ref in (("documented_baseline", "B-1"), ("actual_cost_source", "C-1")):
         await db_conn.execute(
-            "INSERT INTO financial_amount_evidence (organisation_id, event_id, evidence_type, "
-            "external_reference, recorded_at) VALUES (%s, %s, %s, %s, now())",
+            "INSERT INTO financial_amount_evidence (public_id, organisation_id, event_id, evidence_type, "
+            "external_reference, recorded_at) VALUES (gen_random_uuid(), %s, %s, %s, %s, now())",
             (p03_seed.org_id, event_id, evidence_type, ref),
         )
     with pytest.raises(Exception, match="missing variance_calculation_reference evidence"):
@@ -261,8 +387,8 @@ async def test_non_confirmed_events_never_require_evidence(db_conn, p03_seed):
 async def test_evidence_type_vocabulary_rejected_for_invalid_value(db_conn, p03_seed):
     with pytest.raises(Exception, match="ck_famev_evid_type_vocabulary"):
         await db_conn.execute(
-            "INSERT INTO financial_amount_evidence (organisation_id, event_id, evidence_type, "
-            "external_reference, recorded_at) VALUES (%s, %s, 'not_a_real_type', 'X', now())",
+            "INSERT INTO financial_amount_evidence (public_id, organisation_id, event_id, evidence_type, "
+            "external_reference, recorded_at) VALUES (gen_random_uuid(), %s, %s, 'not_a_real_type', 'X', now())",
             (p03_seed.org_id, p03_seed.event_id),
         )
 
@@ -273,8 +399,8 @@ async def test_evidence_type_vocabulary_rejected_for_invalid_value(db_conn, p03_
 async def test_evidence_cannot_attach_to_another_tenants_event(db_conn, p03_seed):
     with pytest.raises(Exception, match="fk_famev_evid_event_tenant_matched"):
         await db_conn.execute(
-            "INSERT INTO financial_amount_evidence (organisation_id, event_id, evidence_type, "
-            "external_reference, recorded_at) VALUES (%s, %s, 'invoice', 'X', now())",
+            "INSERT INTO financial_amount_evidence (public_id, organisation_id, event_id, evidence_type, "
+            "external_reference, recorded_at) VALUES (gen_random_uuid(), %s, %s, 'invoice', 'X', now())",
             (p03_seed.org_b_id, p03_seed.event_id),
         )
 
@@ -283,6 +409,13 @@ async def test_evidence_cannot_attach_to_another_tenants_event(db_conn, p03_seed
 
 @pytest.mark.integration
 async def test_version_2_without_version_1_fails_for_a_fresh_parent(db_conn, p03_seed):
+    """A truly fresh parent with NO version-1 event has no event to legitimately point at -
+    migration 0024 validates the pointer unconditionally for any committed row, so this can only
+    ever fail via 'must not be NULL at commit', never via the event-chain trigger (which would
+    require a pointer to even be evaluated as 'existing but wrong'). This is not a case of two
+    independently-violatable invariants racing each other - the chain-gap can only be isolated by
+    giving the row a valid version-1 genesis first (see test_version_3_after_version_1_only_fails,
+    which does exactly that before testing a real gap)."""
     new_id = await _insert_period_actual(
         db_conn, organisation_id=p03_seed.org_id, rebate_agreement_id=p03_seed.agreement_id,
         entered_by_user_id=p03_seed.user_id,
@@ -293,7 +426,7 @@ async def test_version_2_without_version_1_fails_for_a_fresh_parent(db_conn, p03
         new_source_basis="contract_terms_calculation", new_amount=50, new_calculated_at="2026-06-01",
         change_reason_code="recalculation",
     )
-    with pytest.raises(Exception, match="has no immediately preceding event"):
+    with pytest.raises(Exception, match="must not be NULL at commit"):
         await db_conn.commit()
 
 
@@ -303,16 +436,23 @@ async def test_version_3_after_version_1_only_fails(db_conn, p03_seed):
         db_conn, organisation_id=p03_seed.org_id, rebate_agreement_id=p03_seed.agreement_id,
         entered_by_user_id=p03_seed.user_id,
     )
-    await _insert_event(
-        db_conn, organisation_id=p03_seed.org_id, rebate_period_actual_id=new_id,
-        event_version=1, new_status="unknown", change_reason_code="manual_estimate",
-    )
-    await db_conn.commit()
-    await _insert_event(
+    await _seed_valid_genesis(db_conn, organisation_id=p03_seed.org_id, rebate_period_actual_id=new_id)
+    event_id = await _insert_event(
         db_conn, organisation_id=p03_seed.org_id, rebate_period_actual_id=new_id,
         event_version=3, old_status="unknown", new_status="calculated",
         new_source_basis="contract_terms_calculation", new_amount=50, new_calculated_at="2026-06-01",
         change_reason_code="recalculation",
+    )
+    # Repoint the parent at THIS event too - otherwise migration 0024's "current_event_id is not
+    # the latest event" check (the pointer still references the version-1 genesis, and a newer
+    # event now exists) would fire instead of/alongside the event-chain-integrity trigger this
+    # test actually targets. Isolating to that one check requires the row itself to be otherwise
+    # fully consistent with the event under test.
+    await db_conn.execute(
+        "UPDATE rebate_period_actuals SET expected_amount_current_event_id = %s, expected_amount = 50, "
+        "expected_amount_status = 'calculated', expected_amount_source_basis = 'contract_terms_calculation', "
+        "expected_amount_calculated_at = '2026-06-01' WHERE id = %s",
+        (event_id, new_id),
     )
     with pytest.raises(Exception, match="has no immediately preceding event"):
         await db_conn.commit()
@@ -324,16 +464,20 @@ async def test_version_2_with_fabricated_old_amount_fails(db_conn, p03_seed):
         db_conn, organisation_id=p03_seed.org_id, rebate_agreement_id=p03_seed.agreement_id,
         entered_by_user_id=p03_seed.user_id,
     )
-    await _insert_event(
-        db_conn, organisation_id=p03_seed.org_id, rebate_period_actual_id=new_id,
-        event_version=1, new_status="unknown", change_reason_code="manual_estimate",
-    )
-    await db_conn.commit()
-    await _insert_event(
+    await _seed_valid_genesis(db_conn, organisation_id=p03_seed.org_id, rebate_period_actual_id=new_id)
+    event_id = await _insert_event(
         db_conn, organisation_id=p03_seed.org_id, rebate_period_actual_id=new_id,
         event_version=2, old_amount=999999, old_status="unknown", new_status="calculated",
         new_source_basis="contract_terms_calculation", new_amount=50, new_calculated_at="2026-06-01",
         change_reason_code="recalculation",
+    )
+    # See test_version_3_after_version_1_only_fails - repointing isolates this to the
+    # event-chain-integrity trigger alone, not the row's own "not the latest event" check.
+    await db_conn.execute(
+        "UPDATE rebate_period_actuals SET expected_amount_current_event_id = %s, expected_amount = 50, "
+        "expected_amount_status = 'calculated', expected_amount_source_basis = 'contract_terms_calculation', "
+        "expected_amount_calculated_at = '2026-06-01' WHERE id = %s",
+        (event_id, new_id),
     )
     with pytest.raises(Exception, match=r"old_\* values do not match"):
         await db_conn.commit()
@@ -345,16 +489,20 @@ async def test_version_2_with_fabricated_old_period_fails(db_conn, p03_seed):
         db_conn, organisation_id=p03_seed.org_id, rebate_agreement_id=p03_seed.agreement_id,
         entered_by_user_id=p03_seed.user_id,
     )
-    await _insert_event(
-        db_conn, organisation_id=p03_seed.org_id, rebate_period_actual_id=new_id,
-        event_version=1, new_status="unknown", change_reason_code="manual_estimate",
-    )
-    await db_conn.commit()
-    await _insert_event(
+    await _seed_valid_genesis(db_conn, organisation_id=p03_seed.org_id, rebate_period_actual_id=new_id)
+    event_id = await _insert_event(
         db_conn, organisation_id=p03_seed.org_id, rebate_period_actual_id=new_id,
         event_version=2, old_status="unknown", old_effective_period_start="2026-01-01",
         new_status="calculated", new_source_basis="contract_terms_calculation",
         new_amount=50, new_calculated_at="2026-06-01", change_reason_code="recalculation",
+    )
+    # See test_version_3_after_version_1_only_fails - repointing isolates this to the
+    # event-chain-integrity trigger alone, not the row's own "not the latest event" check.
+    await db_conn.execute(
+        "UPDATE rebate_period_actuals SET expected_amount_current_event_id = %s, expected_amount = 50, "
+        "expected_amount_status = 'calculated', expected_amount_source_basis = 'contract_terms_calculation', "
+        "expected_amount_calculated_at = '2026-06-01' WHERE id = %s",
+        (event_id, new_id),
     )
     with pytest.raises(Exception, match=r"old_\* values do not match"):
         await db_conn.commit()
@@ -368,9 +516,9 @@ async def test_genesis_with_nonnull_old_field_fails(db_conn, p03_seed):
     )
     with pytest.raises(Exception, match="ck_famev_genesis_old_fields_null"):
         await db_conn.execute(
-            "INSERT INTO financial_amount_status_events (organisation_id, rebate_period_actual_id, "
+            "INSERT INTO financial_amount_status_events (public_id, organisation_id, rebate_period_actual_id, "
             "measure_code, event_version, old_status, new_status, new_amount, occurred_at, "
-            "change_reference, change_reason_code) VALUES (%s, %s, 'expected_amount', 1, 'unknown', "
+            "change_reference, change_reason_code) VALUES (gen_random_uuid(), %s, %s, 'expected_amount', 1, 'unknown', "
             "'unknown', NULL, now(), 'test', 'initial_backfill')",
             (p03_seed.org_id, new_id),
         )
@@ -379,16 +527,29 @@ async def test_genesis_with_nonnull_old_field_fails(db_conn, p03_seed):
 @pytest.mark.integration
 async def test_genesis_annual_financial_impact_calculated_with_populated_new_fields_succeeds(db_conn, p03_seed):
     """A genesis event's new_* fields are governed only by the ordinary per-measure combination
-    check, never forced NULL merely for being version 1. p03_seed's fixture only creates a
-    genesis event for expected_amount, so this opportunity has no annual_financial_impact event
-    yet - version 1 here is genuinely its first."""
-    await db_conn.execute(
-        "INSERT INTO financial_amount_status_events (organisation_id, opportunity_id, "
+    check, never forced NULL merely for being version 1. p03_seed.opportunity_id already carries
+    its OWN annual_financial_impact version-1 genesis event (needed to satisfy migration 0024 for
+    p03_seed's own commit), so this uses a fresh opportunity with AFI left virgin instead - version
+    1 here is genuinely its first."""
+    new_id = await _fresh_opp(db_conn, p03_seed, seed_measure="annual_financial_impact")
+    # A fixed literal, not SQL now(), for new_calculated_at - the row-level pointer-consistency
+    # trigger compares the parent snapshot's calculated_at against the event's own value with
+    # IS DISTINCT FROM, so the two statements below must agree on the exact same value, not two
+    # independent evaluations of now() that could differ by microseconds.
+    cur = await db_conn.execute(
+        "INSERT INTO financial_amount_status_events (public_id, organisation_id, opportunity_id, "
         "measure_code, event_version, new_status, new_amount, new_source_basis, "
         "new_calculated_at, new_effective_period_start, occurred_at, change_reference, "
-        "change_reason_code) VALUES (%s, %s, 'annual_financial_impact', 1, 'calculated', 5000, "
-        "'price_review_calculation', now(), '2026-01-01', now(), 'test', 'recalculation')",
-        (p03_seed.org_id, p03_seed.opportunity_id),
+        "change_reason_code) VALUES (gen_random_uuid(), %s, %s, 'annual_financial_impact', 1, 'calculated', 5000, "
+        "'price_review_calculation', '2026-01-01T00:00:00Z', '2026-01-01', now(), 'test', 'recalculation') "
+        "RETURNING id",
+        (p03_seed.org_id, new_id),
+    )
+    row = await cur.fetchone()
+    await _point_opportunity_at_event(
+        db_conn, opportunity_id=new_id, measure_code="annual_financial_impact", event_id=row[0],
+        new_status="calculated", new_amount=5000, new_source_basis="price_review_calculation",
+        new_calculated_at="2026-01-01T00:00:00Z", new_effective_period_start="2026-01-01",
     )
     await db_conn.commit()
 
@@ -396,17 +557,23 @@ async def test_genesis_annual_financial_impact_calculated_with_populated_new_fie
 @pytest.mark.integration
 async def test_genesis_annual_financial_impact_calculated_missing_period_fails(db_conn, p03_seed):
     """Proves the genesis rule and the combination rule cleanly divide responsibility - this
-    fails via the ordinary combination check, not the genesis rule. Uses a different
-    opportunity's annual_financial_impact (still version 1, never touched) to avoid colliding
-    with the prior test's now-committed genesis event."""
-    with pytest.raises(Exception, match="ck_opp_afi_state_combination"):
+    fails via the ordinary combination check on the EVENT row itself (ck_famev_state_combination),
+    not the genesis rule, and not the opportunities table's own snapshot check (that table is
+    never touched by this operation - only financial_amount_status_events is). Uses a fresh
+    opportunity with annual_financial_impact left virgin (still version 1, never touched) to
+    avoid colliding with p03_seed's own AFI genesis event, and its own stated measure
+    (annual_financial_impact/calculated/missing effective period) rather than a mismatched
+    realised_savings row that a wrong opportunities-table constraint name would never actually
+    be raised by."""
+    new_id = await _fresh_opp(db_conn, p03_seed, seed_measure="annual_financial_impact")
+    with pytest.raises(Exception, match="ck_famev_state_combination"):
         await db_conn.execute(
-            "INSERT INTO financial_amount_status_events (organisation_id, opportunity_id, "
+            "INSERT INTO financial_amount_status_events (public_id, organisation_id, opportunity_id, "
             "measure_code, event_version, new_status, new_amount, new_source_basis, "
             "new_calculated_at, occurred_at, change_reference, change_reason_code) VALUES "
-            "(%s, %s, 'realised_savings', 1, 'calculated', 5000, "
-            "'actual_cost_data_calculation', now(), now(), 'test', 'recalculation')",
-            (p03_seed.org_id, p03_seed.opportunity_id),
+            "(gen_random_uuid(), %s, %s, 'annual_financial_impact', 1, 'calculated', 5000, "
+            "'price_review_calculation', now(), now(), 'test', 'recalculation')",
+            (p03_seed.org_id, new_id),
         )
 
 
@@ -416,19 +583,36 @@ async def test_downgrade_with_upgrade_appropriate_reason_code_fails(db_conn, p03
         db_conn, organisation_id=p03_seed.org_id, rebate_agreement_id=p03_seed.agreement_id,
         entered_by_user_id=p03_seed.user_id,
     )
-    await _insert_event(
+    v1_event_id = await _seed_valid_genesis(
         db_conn, organisation_id=p03_seed.org_id, rebate_period_actual_id=new_id,
-        event_version=1, new_status="confirmed", new_source_basis="supplier_statement",
-        new_amount=100, new_approved_at="2026-06-01", new_approved_by_user_id=p03_seed.user_id,
+        new_status="confirmed", new_source_basis="supplier_statement", new_amount=100,
+        new_approved_at="2026-06-01", new_approved_by_user_id=p03_seed.user_id,
         change_reason_code="evidence_received",
     )
-    await db_conn.commit()
-    await _insert_event(
+    # A 'confirmed' expected_amount event also needs its own sufficient-evidence row (a separate,
+    # deferred, independent trigger from the state-combination check) - without it, that trigger
+    # fires at the same final commit and masks the downgrade-reason-code check this test targets.
+    await db_conn.execute(
+        "INSERT INTO financial_amount_evidence (public_id, organisation_id, event_id, evidence_type, "
+        "external_reference, recorded_at) VALUES (gen_random_uuid(), %s, %s, 'supplier_statement', 'SS-001', now())",
+        (p03_seed.org_id, v1_event_id),
+    )
+    event_id = await _insert_event(
         db_conn, organisation_id=p03_seed.org_id, rebate_period_actual_id=new_id,
         event_version=2, old_status="confirmed", old_amount=100, old_source_basis="supplier_statement",
         old_approved_at="2026-06-01", old_approved_by_user_id=p03_seed.user_id,
         new_status="calculated", new_source_basis="contract_terms_calculation",
         new_amount=90, new_calculated_at="2026-06-15", change_reason_code="manual_estimate",
+    )
+    # Repoint at this v2 event - otherwise the row's own "not the latest event" check fires
+    # instead of the downgrade-reason-code check this test targets (see
+    # test_version_3_after_version_1_only_fails for the full explanation).
+    await db_conn.execute(
+        "UPDATE rebate_period_actuals SET expected_amount_current_event_id = %s, expected_amount = 90, "
+        "expected_amount_status = 'calculated', expected_amount_source_basis = 'contract_terms_calculation', "
+        "expected_amount_calculated_at = '2026-06-15', expected_amount_approved_at = NULL, "
+        "expected_amount_approved_by_user_id = NULL WHERE id = %s",
+        (event_id, new_id),
     )
     with pytest.raises(Exception, match="requires a correction-appropriate reason code"):
         await db_conn.commit()
@@ -440,19 +624,32 @@ async def test_downgrade_with_correction_reason_code_succeeds(db_conn, p03_seed)
         db_conn, organisation_id=p03_seed.org_id, rebate_agreement_id=p03_seed.agreement_id,
         entered_by_user_id=p03_seed.user_id,
     )
-    await _insert_event(
+    v1_event_id = await _seed_valid_genesis(
         db_conn, organisation_id=p03_seed.org_id, rebate_period_actual_id=new_id,
-        event_version=1, new_status="confirmed", new_source_basis="supplier_statement",
-        new_amount=100, new_approved_at="2026-06-01", new_approved_by_user_id=p03_seed.user_id,
+        new_status="confirmed", new_source_basis="supplier_statement", new_amount=100,
+        new_approved_at="2026-06-01", new_approved_by_user_id=p03_seed.user_id,
         change_reason_code="evidence_received",
     )
-    await db_conn.commit()
-    await _insert_event(
+    # See test_downgrade_with_upgrade_appropriate_reason_code_fails - the confirmed genesis event
+    # needs its own evidence row for this transaction to reach a clean commit at all.
+    await db_conn.execute(
+        "INSERT INTO financial_amount_evidence (public_id, organisation_id, event_id, evidence_type, "
+        "external_reference, recorded_at) VALUES (gen_random_uuid(), %s, %s, 'supplier_statement', 'SS-001', now())",
+        (p03_seed.org_id, v1_event_id),
+    )
+    event_id = await _insert_event(
         db_conn, organisation_id=p03_seed.org_id, rebate_period_actual_id=new_id,
         event_version=2, old_status="confirmed", old_amount=100, old_source_basis="supplier_statement",
         old_approved_at="2026-06-01", old_approved_by_user_id=p03_seed.user_id,
         new_status="calculated", new_source_basis="contract_terms_calculation",
         new_amount=90, new_calculated_at="2026-06-15", change_reason_code="correction",
+    )
+    await db_conn.execute(
+        "UPDATE rebate_period_actuals SET expected_amount_current_event_id = %s, expected_amount = 90, "
+        "expected_amount_status = 'calculated', expected_amount_source_basis = 'contract_terms_calculation', "
+        "expected_amount_calculated_at = '2026-06-15', expected_amount_approved_at = NULL, "
+        "expected_amount_approved_by_user_id = NULL WHERE id = %s",
+        (event_id, new_id),
     )
     await db_conn.commit()
 
@@ -463,17 +660,22 @@ async def test_upgrade_never_triggers_the_downgrade_check(db_conn, p03_seed):
         db_conn, organisation_id=p03_seed.org_id, rebate_agreement_id=p03_seed.agreement_id,
         entered_by_user_id=p03_seed.user_id,
     )
-    await _insert_event(
+    await _seed_valid_genesis(
         db_conn, organisation_id=p03_seed.org_id, rebate_period_actual_id=new_id,
-        event_version=1, new_status="estimated", new_source_basis="manual_estimate",
-        new_amount=80, change_reason_code="manual_estimate",
+        new_status="estimated", new_source_basis="manual_estimate", new_amount=80,
+        change_reason_code="manual_estimate",
     )
-    await db_conn.commit()
-    await _insert_event(
+    event_id = await _insert_event(
         db_conn, organisation_id=p03_seed.org_id, rebate_period_actual_id=new_id,
         event_version=2, old_status="estimated", old_amount=80, old_source_basis="manual_estimate",
         new_status="calculated", new_source_basis="contract_terms_calculation",
         new_amount=85, new_calculated_at="2026-06-01", change_reason_code="evidence_received",
+    )
+    await db_conn.execute(
+        "UPDATE rebate_period_actuals SET expected_amount_current_event_id = %s, expected_amount = 85, "
+        "expected_amount_status = 'calculated', expected_amount_source_basis = 'contract_terms_calculation', "
+        "expected_amount_calculated_at = '2026-06-01' WHERE id = %s",
+        (event_id, new_id),
     )
     await db_conn.commit()
 
@@ -482,9 +684,9 @@ async def test_upgrade_never_triggers_the_downgrade_check(db_conn, p03_seed):
 async def test_blank_change_reason_code_rejected(db_conn, p03_seed):
     with pytest.raises(Exception, match="null value.*change_reason_code|not-null|NotNullViolation"):
         await db_conn.execute(
-            "INSERT INTO financial_amount_status_events (organisation_id, rebate_period_actual_id, "
+            "INSERT INTO financial_amount_status_events (public_id, organisation_id, rebate_period_actual_id, "
             "measure_code, event_version, new_status, occurred_at, change_reference, change_reason_code) "
-            "VALUES (%s, %s, 'expected_amount', 1, 'unknown', now(), 'test', NULL)",
+            "VALUES (gen_random_uuid(), %s, %s, 'expected_amount', 1, 'unknown', now(), 'test', NULL)",
             (p03_seed.org_id, p03_seed.period_actual_id),
         )
 
@@ -493,9 +695,9 @@ async def test_blank_change_reason_code_rejected(db_conn, p03_seed):
 async def test_invalid_change_reason_code_rejected(db_conn, p03_seed):
     with pytest.raises(Exception, match="ck_famev_reason_code_vocabulary"):
         await db_conn.execute(
-            "INSERT INTO financial_amount_status_events (organisation_id, rebate_period_actual_id, "
+            "INSERT INTO financial_amount_status_events (public_id, organisation_id, rebate_period_actual_id, "
             "measure_code, event_version, new_status, occurred_at, change_reference, change_reason_code) "
-            "VALUES (%s, %s, 'expected_amount', 1, 'unknown', now(), 'test', 'not_a_real_reason')",
+            "VALUES (gen_random_uuid(), %s, %s, 'expected_amount', 1, 'unknown', now(), 'test', 'not_a_real_reason')",
             (p03_seed.org_id, p03_seed.period_actual_id),
         )
 
@@ -505,9 +707,9 @@ async def test_invalid_change_reason_code_rejected(db_conn, p03_seed):
 @pytest.mark.integration
 async def test_parent_inserted_without_any_event_fails_at_commit(db_conn, p03_seed):
     await db_conn.execute(
-        "INSERT INTO rebate_period_actuals (organisation_id, rebate_agreement_id, period_start, "
+        "INSERT INTO rebate_period_actuals (public_id, organisation_id, rebate_agreement_id, period_start, "
         "period_end, entry_source, entered_by_user_id, expected_amount_status) VALUES "
-        "(%s, %s, '2026-07-01', '2026-09-30', 'manual', %s, 'unknown')",
+        "(gen_random_uuid(), %s, %s, '2026-07-01', '2026-09-30', 'manual', %s, 'unknown')",
         (p03_seed.org_id, p03_seed.agreement_id, p03_seed.user_id),
     )
     with pytest.raises(Exception, match="must not be NULL at commit"):
@@ -544,8 +746,17 @@ async def test_pointer_referencing_a_different_parents_event_fails(db_conn, p03_
 
 @pytest.mark.integration
 async def test_snapshot_field_changed_without_new_event_fails(db_conn, p03_seed):
+    """Setup must leave the parent row internally valid (satisfies
+    ck_rpa_expected_amount_state_combination immediately) but inconsistent with its existing
+    current_event_id - moving to a fully valid 'calculated' snapshot while the pointer still
+    references p03_seed's original 'unknown' genesis event does exactly that. Changing only
+    expected_amount_calculated_at (leaving expected_amount_status = 'unknown') would instead
+    violate that immediate combination check before the deferred snapshot/event mismatch this
+    test targets is ever reached."""
     await db_conn.execute(
-        "UPDATE rebate_period_actuals SET expected_amount_calculated_at = now() WHERE id = %s",
+        "UPDATE rebate_period_actuals SET expected_amount = 100, expected_amount_status = 'calculated', "
+        "expected_amount_source_basis = 'contract_terms_calculation', expected_amount_calculated_at = now() "
+        "WHERE id = %s",
         (p03_seed.period_actual_id,),
     )
     with pytest.raises(Exception, match="snapshot does not match its current event"):
@@ -585,17 +796,25 @@ async def test_concurrent_event_writes_for_same_parent_are_serialized_not_racing
         version = await _next_event_version(
             db_conn_a, rebate_period_actual_id=p03_seed.period_actual_id, measure_code="expected_amount"
         )
-        await _insert_event(
+        event_id = await _insert_event(
             db_conn_a, organisation_id=p03_seed.org_id, rebate_period_actual_id=p03_seed.period_actual_id,
             measure_code="expected_amount", event_version=version, old_status="unknown",
             new_status="calculated", new_source_basis="contract_terms_calculation",
             new_amount=100, new_calculated_at="2026-06-01", change_reason_code="recalculation",
         )
+        # Must also repoint expected_amount_current_event_id at the new event - migration 0024
+        # validates the row's CURRENT snapshot against whatever its pointer references at commit,
+        # so updating only the snapshot fields (leaving the pointer at the old genesis event)
+        # would fail with "snapshot does not match its current event", masking the concurrency
+        # behavior this test actually exercises. expected_amount_calculated_at must be the SAME
+        # literal '2026-06-01' passed as new_calculated_at above, not a fresh now() - the
+        # row-level trigger compares them with IS DISTINCT FROM, and two independent evaluations
+        # of now() would never be equal.
         await db_conn_a.execute(
             "UPDATE rebate_period_actuals SET expected_amount = 100, expected_amount_status = 'calculated', "
             "expected_amount_source_basis = 'contract_terms_calculation', "
-            "expected_amount_calculated_at = now() WHERE id = %s",
-            (p03_seed.period_actual_id,),
+            "expected_amount_calculated_at = '2026-06-01', expected_amount_current_event_id = %s WHERE id = %s",
+            (event_id, p03_seed.period_actual_id),
         )
 
     async with db_conn_b.transaction():
@@ -639,8 +858,10 @@ async def _fresh_rpa(db_conn, p03_seed):
     )
 
 
-async def _fresh_opp(db_conn, p03_seed):
-    return await _insert_opportunity(db_conn, organisation_id=p03_seed.org_id, created_by_user_id=p03_seed.user_id)
+async def _fresh_opp(db_conn, p03_seed, seed_measure=None):
+    return await _insert_opportunity(
+        db_conn, organisation_id=p03_seed.org_id, created_by_user_id=p03_seed.user_id, seed_measure=seed_measure,
+    )
 
 
 # ===== expected_amount: unknown =====
@@ -648,10 +869,13 @@ async def _fresh_opp(db_conn, p03_seed):
 
 @pytest.mark.integration
 async def test_combo_afi_confirmed_structurally_rejected_before_reaching_combination_check(db_conn, p03_seed):
-    """Proves the vocabulary check and the new combination check don't conflict - this fails at
-    ck_famev_status_valid_for_measure, never reaching the combination constraint at all."""
-    new_id = await _fresh_opp(db_conn, p03_seed)
-    with pytest.raises(Exception, match="ck_famev_status_valid_for_measure"):
+    """annual_financial_impact has no 'confirmed' branch in ck_famev_state_combination at all -
+    this row necessarily and unavoidably violates BOTH ck_famev_status_valid_for_measure
+    (vocabulary) and ck_famev_state_combination at once. Asserts semantic rejection by either of
+    the two constraints that structurally must both be violated together, not which one Postgres
+    happens to report first - CHECK evaluation order is not a business/test contract."""
+    new_id = await _fresh_opp(db_conn, p03_seed, seed_measure="annual_financial_impact")
+    with pytest.raises(Exception, match="ck_famev_status_valid_for_measure|ck_famev_state_combination"):
         await _insert_event(db_conn, organisation_id=p03_seed.org_id, opportunity_id=new_id,
                              measure_code="annual_financial_impact", new_status="confirmed",
                              new_amount=8000, new_source_basis="supplier_statement",
@@ -662,7 +886,7 @@ async def test_combo_afi_confirmed_structurally_rejected_before_reaching_combina
 async def test_combo_rs_calculated_valid_genuine_zero_amount(db_conn, p03_seed):
     """Confirms IS NOT NULL (not a truthiness check) - a real R0.00 realised saving is a valid,
     evidenced calculated amount, never conflated with 'unknown'."""
-    new_id = await _fresh_opp(db_conn, p03_seed)
+    new_id = await _fresh_opp(db_conn, p03_seed, seed_measure="realised_savings")
     await _insert_event(db_conn, organisation_id=p03_seed.org_id, opportunity_id=new_id,
                          measure_code="realised_savings", new_status="calculated", new_amount=0,
                          new_source_basis="actual_cost_data_calculation", new_calculated_at="2026-01-01T00:00:00Z",
@@ -671,7 +895,7 @@ async def test_combo_rs_calculated_valid_genuine_zero_amount(db_conn, p03_seed):
 
 @pytest.mark.integration
 async def test_combo_rs_calculated_rejects_period_start_after_end(db_conn, p03_seed):
-    new_id = await _fresh_opp(db_conn, p03_seed)
+    new_id = await _fresh_opp(db_conn, p03_seed, seed_measure="realised_savings")
     with pytest.raises(Exception, match="ck_famev_state_combination"):
         await _insert_event(db_conn, organisation_id=p03_seed.org_id, opportunity_id=new_id,
                              measure_code="realised_savings", new_status="calculated", new_amount=3000,
@@ -681,10 +905,11 @@ async def test_combo_rs_calculated_rejects_period_start_after_end(db_conn, p03_s
 
 @pytest.mark.integration
 async def test_combo_rs_estimated_structurally_rejected_before_reaching_combination_check(db_conn, p03_seed):
-    """Mirror of the annual_financial_impact/confirmed test - realised_savings can never reach
-    'estimated', rejected at the vocabulary layer, never at the combination constraint."""
-    new_id = await _fresh_opp(db_conn, p03_seed)
-    with pytest.raises(Exception, match="ck_famev_status_valid_for_measure"):
+    """Mirror of the annual_financial_impact/confirmed test above - realised_savings has no
+    'estimated' branch in ck_famev_state_combination either, so ck_famev_status_valid_for_measure
+    and ck_famev_state_combination are both unavoidably violated together."""
+    new_id = await _fresh_opp(db_conn, p03_seed, seed_measure="realised_savings")
+    with pytest.raises(Exception, match="ck_famev_status_valid_for_measure|ck_famev_state_combination"):
         await _insert_event(db_conn, organisation_id=p03_seed.org_id, opportunity_id=new_id,
                              measure_code="realised_savings", new_status="estimated",
                              new_amount=3000, new_source_basis="actual_cost_data_calculation")
@@ -695,18 +920,27 @@ async def test_combo_confirmed_event_satisfying_combination_still_needs_evidence
     """A confirmed event with a perfectly valid field shape (satisfies ck_famev_state_combination
     completely) must still fail at COMMIT via the separate evidence-sufficiency trigger if no
     evidence rows exist - proving the two mechanisms are independent layers, not overlapping or
-    substituting for each other."""
-    new_id = await _fresh_opp(db_conn, p03_seed)
-    async with db_conn.transaction():
-        await _insert_event(
-            db_conn, organisation_id=p03_seed.org_id, opportunity_id=new_id,
-            measure_code="realised_savings", new_status="confirmed", new_amount=3000,
-            new_source_basis="reconciled_actuals", new_approved_at="2026-01-01T00:00:00Z",
-            new_approved_by_user_id=p03_seed.user_id,
-            new_effective_period_start="2026-01-01", new_effective_period_end="2026-03-31",
-        )  # succeeds here - the combination constraint is immediate and satisfied
-        with pytest.raises(Exception, match="missing documented_baseline evidence"):
-            await db_conn.commit()  # fails here - a separate, later-checked concern
+    substituting for each other. Uses a bare db_conn.commit() like every other deferred-trigger
+    test in this file - _fresh_opp already opened db_conn's one implicit transaction via its own
+    INSERT, so wrapping this in a NESTED db_conn.transaction() would create a SAVEPOINT rather
+    than a real top-level COMMIT, and a deferred constraint trigger only ever fires at a genuine
+    COMMIT, never at a SAVEPOINT release."""
+    new_id = await _fresh_opp(db_conn, p03_seed, seed_measure="realised_savings")
+    event_id = await _insert_event(
+        db_conn, organisation_id=p03_seed.org_id, opportunity_id=new_id,
+        measure_code="realised_savings", new_status="confirmed", new_amount=3000,
+        new_source_basis="reconciled_actuals", new_approved_at="2026-01-01T00:00:00Z",
+        new_approved_by_user_id=p03_seed.user_id,
+        new_effective_period_start="2026-01-01", new_effective_period_end="2026-03-31",
+    )  # succeeds here - the combination constraint is immediate and satisfied
+    await _point_opportunity_at_event(
+        db_conn, opportunity_id=new_id, measure_code="realised_savings", event_id=event_id,
+        new_status="confirmed", new_source_basis="reconciled_actuals", new_amount=3000,
+        new_approved_at="2026-01-01T00:00:00Z", new_approved_by_user_id=p03_seed.user_id,
+        new_effective_period_start="2026-01-01", new_effective_period_end="2026-03-31",
+    )
+    with pytest.raises(Exception, match="missing documented_baseline evidence"):
+        await db_conn.commit()  # fails here - a separate, later-checked concern
 
 
 
@@ -859,7 +1093,7 @@ async def test_combo_matrix_valid(db_conn, p03_seed, measure, status, fields):
         await _insert_event(db_conn, organisation_id=p03_seed.org_id, rebate_period_actual_id=new_id,
                              measure_code=measure, new_status=status, **fields)
     else:
-        new_id = await _fresh_opp(db_conn, p03_seed)
+        new_id = await _fresh_opp(db_conn, p03_seed, seed_measure=measure)
         await _insert_event(db_conn, organisation_id=p03_seed.org_id, opportunity_id=new_id,
                              measure_code=measure, new_status=status, **fields)
 
@@ -874,7 +1108,7 @@ async def test_combo_matrix_malformed(db_conn, p03_seed, measure, status, fields
             await _insert_event(db_conn, organisation_id=p03_seed.org_id, rebate_period_actual_id=new_id,
                                  measure_code=measure, new_status=status, **fields)
         else:
-            new_id = await _fresh_opp(db_conn, p03_seed)
+            new_id = await _fresh_opp(db_conn, p03_seed, seed_measure=measure)
             await _insert_event(db_conn, organisation_id=p03_seed.org_id, opportunity_id=new_id,
                                  measure_code=measure, new_status=status, **fields)
 
@@ -882,35 +1116,51 @@ async def test_combo_matrix_malformed(db_conn, p03_seed, measure, status, fields
 async def test_confirmed_expected_amount_event_without_evidence_fails_at_commit(db_conn, p03_seed):
     """The expected_amount counterpart to the existing realised_savings evidence-sufficiency
     tests above - this measure's confirmed-tier requires at least one supplier_statement or
-    credit_note evidence row; previously untested for this specific measure."""
+    credit_note evidence row; previously untested for this specific measure. Uses a bare
+    db_conn.commit() like every other deferred-trigger test in this file - _fresh_rpa already
+    opened db_conn's one implicit transaction via its own INSERT, so a NESTED
+    db_conn.transaction() here would create a SAVEPOINT rather than a real top-level COMMIT, and
+    a deferred constraint trigger only ever fires at a genuine COMMIT."""
     new_id = await _fresh_rpa(db_conn, p03_seed)
-    async with db_conn.transaction():
-        await _insert_event(
-            db_conn, organisation_id=p03_seed.org_id, rebate_period_actual_id=new_id,
-            measure_code="expected_amount", new_status="confirmed", new_amount=500,
-            new_source_basis="supplier_statement", new_approved_at="2026-01-01T00:00:00Z",
-            new_approved_by_user_id=p03_seed.user_id,
-        )
-        with pytest.raises(Exception, match="missing valid rebate-confirmation evidence"):
-            await db_conn.commit()
+    event_id = await _insert_event(
+        db_conn, organisation_id=p03_seed.org_id, rebate_period_actual_id=new_id,
+        measure_code="expected_amount", new_status="confirmed", new_amount=500,
+        new_source_basis="supplier_statement", new_approved_at="2026-01-01T00:00:00Z",
+        new_approved_by_user_id=p03_seed.user_id,
+    )
+    await db_conn.execute(
+        "UPDATE rebate_period_actuals SET expected_amount_current_event_id = %s, expected_amount = 500, "
+        "expected_amount_status = 'confirmed', expected_amount_source_basis = 'supplier_statement', "
+        "expected_amount_approved_at = '2026-01-01T00:00:00Z', expected_amount_approved_by_user_id = %s "
+        "WHERE id = %s",
+        (event_id, p03_seed.user_id, new_id),
+    )
+    with pytest.raises(Exception, match="missing valid rebate-confirmation evidence"):
+        await db_conn.commit()
 
 
 @pytest.mark.integration
 async def test_confirmed_expected_amount_event_with_credit_note_evidence_commits(db_conn, p03_seed):
     new_id = await _fresh_rpa(db_conn, p03_seed)
-    async with db_conn.transaction():
-        event_id = await _insert_event(
-            db_conn, organisation_id=p03_seed.org_id, rebate_period_actual_id=new_id,
-            measure_code="expected_amount", new_status="confirmed", new_amount=500,
-            new_source_basis="credit_note", new_approved_at="2026-01-01T00:00:00Z",
-            new_approved_by_user_id=p03_seed.user_id,
-        )
-        await db_conn.execute(
-            "INSERT INTO financial_amount_evidence (organisation_id, event_id, evidence_type, "
-            "external_reference, recorded_at) VALUES (%s, %s, 'credit_note', 'CN-001', now())",
-            (p03_seed.org_id, event_id),
-        )
-        await db_conn.commit()  # must succeed
+    event_id = await _insert_event(
+        db_conn, organisation_id=p03_seed.org_id, rebate_period_actual_id=new_id,
+        measure_code="expected_amount", new_status="confirmed", new_amount=500,
+        new_source_basis="credit_note", new_approved_at="2026-01-01T00:00:00Z",
+        new_approved_by_user_id=p03_seed.user_id,
+    )
+    await db_conn.execute(
+        "UPDATE rebate_period_actuals SET expected_amount_current_event_id = %s, expected_amount = 500, "
+        "expected_amount_status = 'confirmed', expected_amount_source_basis = 'credit_note', "
+        "expected_amount_approved_at = '2026-01-01T00:00:00Z', expected_amount_approved_by_user_id = %s "
+        "WHERE id = %s",
+        (event_id, p03_seed.user_id, new_id),
+    )
+    await db_conn.execute(
+        "INSERT INTO financial_amount_evidence (public_id, organisation_id, event_id, evidence_type, "
+        "external_reference, recorded_at) VALUES (gen_random_uuid(), %s, %s, 'credit_note', 'CN-001', now())",
+        (p03_seed.org_id, event_id),
+    )
+    await db_conn.commit()  # must succeed
 
 
 _ZERO_AMOUNT_VALID_CASE_PARAMS = [
@@ -939,7 +1189,7 @@ async def test_combo_matrix_valid_zero_amount(db_conn, p03_seed, measure, status
         await _insert_event(db_conn, organisation_id=p03_seed.org_id, rebate_period_actual_id=new_id,
                              measure_code=measure, new_status=status, **fields)
     else:
-        new_id = await _fresh_opp(db_conn, p03_seed)
+        new_id = await _fresh_opp(db_conn, p03_seed, seed_measure=measure)
         await _insert_event(db_conn, organisation_id=p03_seed.org_id, opportunity_id=new_id,
                              measure_code=measure, new_status=status, **fields)
 
