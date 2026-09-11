@@ -1,6 +1,8 @@
 """Opportunity register routes (Phase 2 minimal CRUD, Phase 5 waterfall/savings-type extension)."""
 from __future__ import annotations
 
+import uuid
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,6 +33,36 @@ async def _get_opportunity(db: AsyncSession, public_id: str) -> Opportunity:
     return opportunity
 
 
+async def _resolve_supplier_public_id(db: AsyncSession, supplier_id: int | None) -> uuid.UUID | None:
+    """See OpportunityRead's own docstring: no ORM relationship exists for this FK, so the
+    related supplier's public_id is always resolved with its own explicit, RLS-scoped query
+    (this session's active org context - same as every other query on this connection). A
+    supplier is genuinely optional (Opportunity.supplier_id is nullable) - None in, None out."""
+    if supplier_id is None:
+        return None
+    result = await db.execute(select(Supplier.public_id).where(Supplier.id == supplier_id))
+    return result.scalar_one_or_none()
+
+
+def _to_read_model(opportunity: Opportunity, supplier_public_id: uuid.UUID | None) -> OpportunityRead:
+    return OpportunityRead(
+        public_id=opportunity.public_id, title=opportunity.title, opportunity_type=opportunity.opportunity_type,
+        supplier_public_id=supplier_public_id, description=opportunity.description,
+        annual_financial_impact=opportunity.annual_financial_impact,
+        annual_financial_impact_status=opportunity.annual_financial_impact_status,
+        annual_financial_impact_source_basis=opportunity.annual_financial_impact_source_basis,
+        annual_financial_impact_effective_from=opportunity.annual_financial_impact_effective_from,
+        savings_type=opportunity.savings_type, baseline_value=opportunity.baseline_value,
+        baseline_methodology=opportunity.baseline_methodology, confidence=opportunity.confidence,
+        realised_savings=opportunity.realised_savings, realised_savings_status=opportunity.realised_savings_status,
+        realised_savings_source_basis=opportunity.realised_savings_source_basis,
+        realised_savings_effective_period_start=opportunity.realised_savings_effective_period_start,
+        realised_savings_effective_period_end=opportunity.realised_savings_effective_period_end,
+        status=opportunity.status, approved_at=opportunity.approved_at,
+        algorithm_version=opportunity.algorithm_version, calculation_timestamp=opportunity.calculation_timestamp,
+    )
+
+
 @router.post("", response_model=OpportunityRead, status_code=201)
 async def create_opportunity(
     payload: OpportunityCreate,
@@ -40,7 +72,11 @@ async def create_opportunity(
     opportunity = await opportunity_service.create_opportunity(
         db, organisation_id=claims.active_org_id, user_id=claims.user_id, payload=payload
     )
-    return OpportunityRead.model_validate(opportunity)
+    # payload.supplier_public_id was already validated (and, via RLS, confirmed to belong to this
+    # org) by opportunity_service.create_opportunity before it set opportunity.supplier_id from
+    # it - safe to echo straight back, same pattern app/api/v1/purchase_orders.py's create route
+    # already uses. Saves a redundant query, not just a shortcut.
+    return _to_read_model(opportunity, payload.supplier_public_id)
 
 
 @router.get("", response_model=list[OpportunityRead])
@@ -52,7 +88,15 @@ async def list_opportunities(
     opportunities = await opportunity_service.list_opportunities(
         db, organisation_id=claims.active_org_id, savings_type=savings_type, status=status
     )
-    return [OpportunityRead.model_validate(o) for o in opportunities]
+    # One batched, RLS-scoped lookup for every distinct supplier_id in this page rather than one
+    # query per opportunity - same safety property as _resolve_supplier_public_id, without the
+    # N+1.
+    supplier_ids = {o.supplier_id for o in opportunities if o.supplier_id is not None}
+    supplier_public_ids: dict[int, uuid.UUID] = {}
+    if supplier_ids:
+        result = await db.execute(select(Supplier.id, Supplier.public_id).where(Supplier.id.in_(supplier_ids)))
+        supplier_public_ids = dict(result.all())
+    return [_to_read_model(o, supplier_public_ids.get(o.supplier_id)) for o in opportunities]
 
 
 @router.post("/{opportunity_public_id}/advance", response_model=OpportunityRead)
@@ -66,7 +110,8 @@ async def advance_opportunity_stage(
         db, organisation_id=claims.active_org_id, user_id=claims.user_id,
         opportunity=opportunity, target_status=target_status,
     )
-    return OpportunityRead.model_validate(updated)
+    supplier_public_id = await _resolve_supplier_public_id(db, updated.supplier_id)
+    return _to_read_model(updated, supplier_public_id)
 
 
 @router.post("/{opportunity_public_id}/realise", response_model=OpportunityRead)
@@ -85,7 +130,8 @@ async def realise_opportunity(
         variance_calculation_reference=payload.variance_calculation_reference,
         change_reference=f"api_realise_opportunity:{opportunity_public_id}",
     )
-    return OpportunityRead.model_validate(updated)
+    supplier_public_id = await _resolve_supplier_public_id(db, updated.supplier_id)
+    return _to_read_model(updated, supplier_public_id)
 
 
 @router.post("/duplicate-sku-scan/{supplier_public_id}")

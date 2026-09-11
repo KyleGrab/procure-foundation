@@ -44,10 +44,18 @@ class OpportunityCreate(BaseModel):
 
 
 class OpportunityRead(BaseModel):
+    """SUPPLIER-PUBLIC-ID-R1/R2: Opportunity.supplier_id is a plain, nullable FK column - this
+    codebase never uses SQLAlchemy relationship() (zero instances anywhere in app/db/models/), so
+    supplier_public_id can never be auto-populated by from_attributes off a bare Opportunity
+    instance. The route layer (app/api/v1/opportunities.py) resolves it explicitly via its own
+    RLS-scoped query and constructs this model directly - the same established pattern
+    app/api/v1/purchase_orders.py already uses for PurchaseOrderRead.supplier_public_id.
+    Genuinely optional (= None default): a supplier is not mandatory for every Opportunity."""
+
     public_id: uuid.UUID
     title: str
     opportunity_type: str
-    supplier_public_id: uuid.UUID | None
+    supplier_public_id: uuid.UUID | None = None
     description: str | None
     annual_financial_impact: Decimal | None
     annual_financial_impact_status: str

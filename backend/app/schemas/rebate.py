@@ -46,6 +46,22 @@ class RebateAgreementCreate(BaseModel):
 
 
 class RebateAgreementRead(BaseModel):
+    """SUPPLIER-PUBLIC-ID-R1/R2: supplier_public_id stays REQUIRED, not Optional.
+
+    RebateAgreement (app/db/models/rebate.py) legitimately supports a customer-side (sell-side)
+    direction too - ck_rebate_agreements_supplier_or_customer permits customer_id-only rows, and
+    real data motivated the widening (see that model's own docstring: TTM Rebates Paid over 3x
+    TTM Rebates Received). But no route creates or reads that direction today:
+    RebateAgreementCreate requires supplier_public_id with no customer_id/customer_public_id
+    input field at all, and rebate_service.create_rebate_agreement always sets supplier_id,
+    never customer_id. Every RebateAgreement reachable through this API is therefore buy-side, in
+    practice as well as by the current input contract - confirmed by direct inspection, not
+    assumed - so keeping this field required correctly documents that guarantee. Making it
+    Optional here would silently hide the day a sell-side create path is added without this
+    response model being extended to serialize a counterparty identity for it - see
+    app/api/v1/rebates.py's _resolve_supplier_public_id, which raises loudly instead if that
+    invariant is ever violated (a customer-side row somehow reaches this route)."""
+
     public_id: uuid.UUID
     supplier_public_id: uuid.UUID
     title: str
