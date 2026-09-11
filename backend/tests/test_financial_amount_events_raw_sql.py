@@ -409,24 +409,35 @@ async def test_evidence_cannot_attach_to_another_tenants_event(db_conn, p03_seed
 
 @pytest.mark.integration
 async def test_version_2_without_version_1_fails_for_a_fresh_parent(db_conn, p03_seed):
-    """A truly fresh parent with NO version-1 event has no event to legitimately point at -
-    migration 0024 validates the pointer unconditionally for any committed row, so this can only
-    ever fail via 'must not be NULL at commit', never via the event-chain trigger (which would
-    require a pointer to even be evaluated as 'existing but wrong'). This is not a case of two
-    independently-violatable invariants racing each other - the chain-gap can only be isolated by
-    giving the row a valid version-1 genesis first (see test_version_3_after_version_1_only_fails,
-    which does exactly that before testing a real gap)."""
+    """Corrected in P03-TEST-R3: migration 0024's parent-final-state trigger never requires
+    version continuity - it only checks that the CURRENT pointer is non-NULL, references a real
+    matching event, matches the parent's own snapshot, and is the latest event for this
+    parent+measure. None of that requires version 1 to exist; pointing the parent at THIS
+    version-2 event (with a matching snapshot) satisfies it fully, since a version-2 event with
+    nothing after it trivially is 'the latest'. That isolates the row to migration 0021's
+    check_event_chain_integrity trigger alone, which - independently, on financial_amount_status_
+    events, not on the parent table - requires a real immediately-preceding event for any
+    version > 1 and has no such requirement to skip. Runtime-verified directly (P03-TEST-R3): the
+    prior version of this test never reached that far, and instead accepted 'must not be NULL at
+    commit' from the parent trigger - a real but unrelated-to-this-test's-name earlier invariant,
+    left unset only because the row was never pointed at anything at all."""
     new_id = await _insert_period_actual(
         db_conn, organisation_id=p03_seed.org_id, rebate_agreement_id=p03_seed.agreement_id,
         entered_by_user_id=p03_seed.user_id,
     )
-    await _insert_event(
+    event_id = await _insert_event(
         db_conn, organisation_id=p03_seed.org_id, rebate_period_actual_id=new_id,
         event_version=2, old_status="unknown", new_status="calculated",
         new_source_basis="contract_terms_calculation", new_amount=50, new_calculated_at="2026-06-01",
         change_reason_code="recalculation",
     )
-    with pytest.raises(Exception, match="must not be NULL at commit"):
+    await db_conn.execute(
+        "UPDATE rebate_period_actuals SET expected_amount_current_event_id = %s, expected_amount = 50, "
+        "expected_amount_status = 'calculated', expected_amount_source_basis = 'contract_terms_calculation', "
+        "expected_amount_calculated_at = '2026-06-01' WHERE id = %s",
+        (event_id, new_id),
+    )
+    with pytest.raises(Exception, match="has no immediately preceding event"):
         await db_conn.commit()
 
 
