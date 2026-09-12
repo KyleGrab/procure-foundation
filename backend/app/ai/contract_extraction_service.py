@@ -10,16 +10,18 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.llm_provider import LLMProvider
+from app.ai.prompt_loader import load_prompt_body
 from app.ai.schemas import ContractExtractionOutput
 from app.db.models import ContractExtraction
 
-_PROMPT_TEMPLATE_PATH = "app/ai/prompts/contract_clause_extraction.md"
 _PROMPT_VERSION = "v1"
 
 
 async def extract_terms(provider: LLMProvider, document_text: str) -> ContractExtractionOutput:
-    with open(_PROMPT_TEMPLATE_PATH) as f:
-        template = f.read()
+    # PROMPT-TEMPLATE-LOADER-R1: only the runtime body after contract_clause_extraction.md's own
+    # '---' boundary is ever read or formatted - its developer-documentation header is discarded
+    # before this point, never sent to the model.
+    template = load_prompt_body("contract_clause_extraction")
     prompt = template.format(document_text=document_text)
     return await provider.complete_structured(
         system="Contract term extraction assistant - never a source of legal advice.",

@@ -23,12 +23,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.llm_provider import LLMProvider
+from app.ai.prompt_loader import load_prompt_body
 from app.ai.schemas import NegotiationBriefOutput
 from app.analytics.spend_analytics import SpendItem
 from app.db.models import Contract, PriceReviewLine, Supplier
 from app.services import spend_analytics_service
-
-_PROMPT_TEMPLATE_PATH = "app/ai/prompts/negotiation_brief.md"
 
 
 @dataclass(frozen=True)
@@ -131,8 +130,11 @@ async def build_negotiation_brief_context_from_spend(
 
 
 async def generate_brief(provider: LLMProvider, context: NegotiationBriefContext) -> NegotiationBriefOutput:
-    with open(_PROMPT_TEMPLATE_PATH) as f:
-        template = f.read()
+    # PROMPT-TEMPLATE-LOADER-R1: only the runtime body after negotiation_brief.md's own '---'
+    # boundary is ever read or formatted - its developer-documentation header (which illustrates
+    # the mechanism with a literal '{placeholder}' example) is discarded before this point, never
+    # evaluated as a substitution and never sent to the model.
+    template = load_prompt_body("negotiation_brief")
 
     prompt = template.format(
         supplier_name=context.supplier_name,
