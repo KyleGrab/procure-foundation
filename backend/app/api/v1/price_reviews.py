@@ -5,6 +5,7 @@ checks (docs/architecture.md's rule that business logic never lives in route han
 """
 from __future__ import annotations
 
+import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, UploadFile
@@ -16,7 +17,7 @@ from app.core.constants import Permission
 from app.core.exceptions import NotFoundError, ValidationFailedError
 from app.core.permissions import require_permission
 from app.core.security import AccessTokenClaims
-from app.db.models import PriceReview, PriceReviewFile, PriceReviewLine, PriceReviewMappingTemplate
+from app.db.models import PriceReview, PriceReviewFile, PriceReviewLine, PriceReviewMappingTemplate, Supplier
 from app.db.session import get_db
 from app.ingestion.csv_reader import read_csv_rows
 from app.ingestion.excel_reader import read_xlsx_rows
@@ -62,6 +63,31 @@ async def _get_line(db: AsyncSession, review_id: int, line_public_id: str) -> Pr
     return line
 
 
+async def _resolve_supplier_public_id(db: AsyncSession, supplier_id: int) -> uuid.UUID:
+    """PriceReview.supplier_id is NOT NULL (app/db/models/price_review.py) - every review has
+    exactly one supplier, no either/or case like RebateAgreement's buy-side/sell-side split. No
+    ORM relationship exists for this FK (this codebase never uses SQLAlchemy relationship() -
+    zero instances anywhere in app/db/models/), so the related supplier's public_id is always
+    resolved with its own explicit query - same established pattern as
+    app/api/v1/purchase_orders.py's _to_read_model. Deliberately not RLS-bypassed: this runs on
+    the same request-scoped, org-context-carrying session (app/db/session.py) as every other
+    query here, so it is subject to the same tenant_isolation policy. scalar_one() (not
+    scalar_one_or_none()) is deliberate - a PriceReview whose supplier_id doesn't resolve to a
+    visible Supplier row is a genuine data-integrity problem, not a missing/optional value, and
+    must fail loudly rather than silently return an invented identifier or None for a field the
+    schema and the domain both require."""
+    result = await db.execute(select(Supplier.public_id).where(Supplier.id == supplier_id))
+    return result.scalar_one()
+
+
+def _to_read_model(review: PriceReview, supplier_public_id: uuid.UUID) -> PriceReviewRead:
+    return PriceReviewRead(
+        public_id=review.public_id, supplier_public_id=supplier_public_id, status=review.status,
+        effective_date=review.effective_date, currency=review.currency, price_basis=review.price_basis,
+        completed_at=review.completed_at,
+    )
+
+
 @router.post("", response_model=PriceReviewRead, status_code=201)
 async def create_price_review(
     payload: PriceReviewCreate,
@@ -71,7 +97,10 @@ async def create_price_review(
     review = await price_review_service.create_review(
         db, organisation_id=claims.active_org_id, user_id=claims.user_id, payload=payload
     )
-    return PriceReviewRead.model_validate(review)
+    # payload.supplier_public_id was already validated (and, via RLS, confirmed to belong to this
+    # org) by price_review_service.create_review before it set review.supplier_id from it - safe
+    # to echo straight back, same pattern app/api/v1/purchase_orders.py's create route uses.
+    return _to_read_model(review, payload.supplier_public_id)
 
 
 @router.get("/{review_public_id}", response_model=PriceReviewRead)
@@ -81,7 +110,8 @@ async def get_price_review(
     db: AsyncSession = Depends(get_db),
 ) -> PriceReviewRead:
     review = await _get_review(db, review_public_id)
-    return PriceReviewRead.model_validate(review)
+    supplier_public_id = await _resolve_supplier_public_id(db, review.supplier_id)
+    return _to_read_model(review, supplier_public_id)
 
 
 @router.post("/{review_public_id}/files/{file_type}", status_code=201)
