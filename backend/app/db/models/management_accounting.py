@@ -4,7 +4,7 @@ import uuid
 from datetime import date
 
 from sqlalchemy import Boolean, Date, ForeignKey, Numeric, String
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, TenantScopedMixin
@@ -143,6 +143,14 @@ class WorkingCapitalSnapshot(Base, TenantScopedMixin):
     dpo: Mapped[float | None] = mapped_column(Numeric(9, 1))
     ccc: Mapped[float | None] = mapped_column(Numeric(9, 1))
     working_capital_ratio: Mapped[float | None] = mapped_column(Numeric(9, 2))
+
+    # WC-DERIVED-METRIC-DIAGNOSTICS-R1 (migration 0025): NULL = legacy snapshot, diagnostics were
+    # never evaluated/persisted (unknown, not "no issues"). [] = evaluated, nothing to report.
+    # [...] = one or more stable lower_snake_case codes (e.g. "dso_out_of_range",
+    # "ccc_unavailable_dso_out_of_range") explaining why a dso/dio/dpo/ccc value above is null
+    # even though its denominator was genuinely non-zero - see
+    # app.services.working_capital_service._apply_days_metric_storage_boundary, the only writer.
+    derived_metric_diagnostics: Mapped[list | None] = mapped_column(JSONB)
 
     corrects_id: Mapped[int | None] = mapped_column(ForeignKey("working_capital_snapshots.id"))
     uploaded_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)

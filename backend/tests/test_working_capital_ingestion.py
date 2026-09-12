@@ -46,6 +46,9 @@ class TestWorkingCapitalPeriodLocking:
         )
         assert snapshot.corrects_id is None
         assert snapshot.dso is not None  # confirms calculate_working_capital_metrics actually ran
+        # WC-DERIVED-METRIC-DIAGNOSTICS-R1: a normal, representable snapshot persists an empty
+        # list - "evaluated, nothing to report" - never NULL (that means "never evaluated").
+        assert snapshot.derived_metric_diagnostics == []
 
     async def test_reingesting_same_period_without_correction_flag_raises_conflict(self, client, db_session):
         _, org_id, user_id = await _register_org(client, "wc-conflict@example.com", "WC Conflict Org")
@@ -149,11 +152,89 @@ class TestPeriodLockIsOrganisationScoped:
             annualized_revenue=Decimal("1000000"), annualized_cogs=Decimal("700000"),
         )
         # Org B ingesting for the SAME date must not conflict with Org A's snapshot - the
-        # period-lock query is scoped per-organisation, not global.
+        # period-lock query is scoped per-organisation, not global. Realistic, dimensionally
+        # consistent figures (WORKING-CAPITAL-PRECISION-R1/WC-DERIVED-METRIC-DIAGNOSTICS-R1): a
+        # smaller but genuine business's balance sheet, not the prior degenerate
+        # annualized_revenue=1 payload that produced a ~365-million-day DSO unrelated to what
+        # this test actually proves (organisation scoping, not derived-metric magnitude).
         snapshot_b = await ingest_working_capital_snapshot(
             db_session, organisation_id=org_b, user_id=user_b, as_of_date=date(2026, 8, 31),
+            accounts_receivable=Decimal("120000"), accounts_payable=Decimal("60000"),
+            inventory_value=Decimal("40000"), cash_balance=Decimal("15000"),
+            annualized_revenue=Decimal("900000"), annualized_cogs=Decimal("650000"),
+        )
+        assert snapshot_b.corrects_id is None
+        assert snapshot_b.derived_metric_diagnostics == []  # realistic inputs - nothing to diagnose
+
+
+class TestDerivedMetricStorageBoundary:
+    """
+    WC-DERIVED-METRIC-DIAGNOSTICS-R1: working_capital_snapshots.dso/dio/dpo/ccc are Numeric(9, 1) -
+    at most 99999999.9 in magnitude. A genuinely non-zero but near-zero annualized_revenue/
+    annualized_cogs denominator against a normal balance produces an arithmetically exact but
+    unstorable result (WORKING-CAPITAL-PRECISION-R1's original reproduction: accounts_receivable=
+    999999 against annualized_revenue=1 -> dso = ccc = 364999635.0 days). This class proves that
+    case is now diagnosed, not a raw asyncpg.exceptions.NumericValueOutOfRangeError.
+    """
+
+    async def test_extreme_denominator_no_longer_raises_and_is_diagnosed(self, client, db_session):
+        _, org_id, user_id = await _register_org(client, "wc-extreme@example.com", "WC Extreme Org")
+        # The exact degenerate payload that previously raised NumericValueOutOfRangeError.
+        snapshot = await ingest_working_capital_snapshot(
+            db_session, organisation_id=org_id, user_id=user_id, as_of_date=date(2026, 8, 31),
             accounts_receivable=Decimal("999999"), accounts_payable=Decimal("1"),
             inventory_value=Decimal("1"), cash_balance=Decimal("1"),
             annualized_revenue=Decimal("1"), annualized_cogs=Decimal("1"),
         )
-        assert snapshot_b.corrects_id is None
+        # The affected metric is null - never zero, capped, or coerced.
+        assert snapshot.dso is None
+        # DIO/DPO were genuinely representable (365.0 each) and are persisted unchanged - a
+        # different metric being out of range must not null out ones that are fine.
+        assert snapshot.dio == Decimal("365.0")
+        assert snapshot.dpo == Decimal("365.0")
+        # CCC depends on dso, which is unavailable - null, never a partial/silently-computed value.
+        assert snapshot.ccc is None
+        assert snapshot.derived_metric_diagnostics == ["dso_out_of_range", "ccc_unavailable_dso_out_of_range"]
+        # Every accepted raw source fact is preserved exactly as submitted.
+        assert snapshot.accounts_receivable == Decimal("999999.0000")
+        assert snapshot.accounts_payable == Decimal("1.0000")
+        assert snapshot.inventory_value == Decimal("1.0000")
+        assert snapshot.cash_balance == Decimal("1.0000")
+        assert snapshot.annualized_revenue == Decimal("1.0000")
+        assert snapshot.annualized_cogs == Decimal("1.0000")
+
+    async def test_zero_denominator_ccc_unavailable_carries_no_out_of_range_diagnostic(self, client, db_session):
+        """Distinguishes the pre-existing, already-correct zero-denominator None (§3.2 - never a
+        fabricated 0 or 365) from this phase's new out-of-range handling: annualized_revenue=0
+        makes dso None for an entirely different, pre-existing reason, and must not be reported
+        as if it were newly out-of-range."""
+        _, org_id, user_id = await _register_org(client, "wc-zero-rev@example.com", "WC Zero Revenue Org")
+        snapshot = await ingest_working_capital_snapshot(
+            db_session, organisation_id=org_id, user_id=user_id, as_of_date=date(2026, 8, 31),
+            accounts_receivable=Decimal("50000"), accounts_payable=Decimal("20000"),
+            inventory_value=Decimal("10000"), cash_balance=Decimal("5000"),
+            annualized_revenue=Decimal("0"), annualized_cogs=Decimal("400000"),
+        )
+        assert snapshot.dso is None  # zero denominator - pre-existing, unchanged behaviour
+        assert snapshot.dio is not None
+        assert snapshot.dpo is not None
+        assert snapshot.ccc is None  # dso unavailable -> ccc unavailable, unchanged behaviour
+        # No diagnostic at all - this is the existing, already-correct zero-denominator case, not
+        # a new out-of-range condition this phase introduces handling for.
+        assert snapshot.derived_metric_diagnostics == []
+
+    async def test_zero_cogs_never_fabricates_zero_days(self, client, db_session):
+        """Preserves existing handling: a zero/missing COGS denominator makes DIO/DPO/CCC None,
+        never 0 - re-verified unchanged after this phase's storage-boundary guard was added."""
+        _, org_id, user_id = await _register_org(client, "wc-zero-cogs@example.com", "WC Zero COGS Org")
+        snapshot = await ingest_working_capital_snapshot(
+            db_session, organisation_id=org_id, user_id=user_id, as_of_date=date(2026, 8, 31),
+            accounts_receivable=Decimal("50000"), accounts_payable=Decimal("20000"),
+            inventory_value=Decimal("10000"), cash_balance=Decimal("5000"),
+            annualized_revenue=Decimal("400000"), annualized_cogs=Decimal("0"),
+        )
+        assert snapshot.dio is None
+        assert snapshot.dpo is None
+        assert snapshot.ccc is None
+        assert snapshot.dso is not None  # unaffected - its own denominator (revenue) was fine
+        assert snapshot.derived_metric_diagnostics == []
