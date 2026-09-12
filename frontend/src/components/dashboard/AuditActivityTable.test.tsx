@@ -148,9 +148,12 @@ describe("AuditActivityTable - consolidation flag review", () => {
       const button = await screen.findByText(label);
       const title = button.getAttribute("title") ?? "";
       expect(title).toMatch(/review decision only/i);
-      // Never implies an automatic merge, reassignment, price, opportunity, or financial action.
-      expect(title.toLowerCase()).not.toMatch(/merge|reassign|price change|opportunity|financial fact will be created/);
+      // States plainly what it does NOT do - "does not merge suppliers, reassign anything, or
+      // write a financial fact" - never an affirmative claim that any of those will happen.
       expect(title).toMatch(/does not merge suppliers/i);
+      expect(title.toLowerCase()).not.toMatch(
+        /will merge|will reassign|automatically merge|creates? an opportunity|changes? the price/
+      );
     }
   });
 });

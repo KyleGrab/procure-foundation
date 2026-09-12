@@ -15,7 +15,7 @@
  * would be asserting something I have no way to have verified - so this file documents the
  * scenarios precisely without overclaiming their result.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { renderHook, act } from "@testing-library/react";
 import { useWindowDimensions } from "@/lib/useWindowDimensions";
@@ -49,19 +49,34 @@ describe("useWindowDimensions - extreme aspect ratios", () => {
   });
 
   it("collapses a rapid resize burst (10 events in under the debounce window) into one state update", () => {
-    mockViewport(1440, 900);
-    const { result } = renderHook(() => useWindowDimensions());
-    act(() => {
-      for (let i = 0; i < 10; i++) {
-        mockViewport(1440 + i * 10, 900);
-        window.dispatchEvent(new Event("resize"));
-      }
-    });
-    // Only the FINAL size should be reflected once the debounce window elapses - this is a
-    // behavioral assertion about the hook's debounce wiring, which viewport-scaling.test.ts's
-    // real, executed debounce tests already prove correct in isolation; this test would confirm
-    // the hook actually uses that already-proven debounce correctly, not re-prove debounce itself.
-    expect(result.current.width).toBe(1440 + 9 * 10);
+    // FRONTEND-QUALITY-GATE-BLOCKERS-R1: the original version of this test asserted the final
+    // debounced width without ever letting real (or fake) time pass, so useWindowDimensions'
+    // 150ms-debounced resize handler never actually fired within the test - `result.current` was
+    // still the value from the initial synchronous render, not a hook defect. debounce() itself
+    // (viewport-scaling.ts) is correct - it reads window.innerWidth/innerHeight at the moment its
+    // scheduled callback actually fires, not at scheduling time, so the LAST of these 10 events is
+    // exactly what should win once its 150ms timer elapses. Fake timers let that genuinely happen.
+    vi.useFakeTimers();
+    try {
+      mockViewport(1440, 900);
+      const { result } = renderHook(() => useWindowDimensions());
+      act(() => {
+        for (let i = 0; i < 10; i++) {
+          mockViewport(1440 + i * 10, 900);
+          window.dispatchEvent(new Event("resize"));
+        }
+      });
+      act(() => {
+        vi.advanceTimersByTime(200); // past useWindowDimensions' 150ms debounce window
+      });
+      // Only the FINAL size should be reflected once the debounce window elapses - this is a
+      // behavioral assertion about the hook's debounce wiring, which viewport-scaling.test.ts's
+      // real, executed debounce tests already prove correct in isolation; this test confirms
+      // the hook actually uses that already-proven debounce correctly, not re-proving debounce itself.
+      expect(result.current.width).toBe(1440 + 9 * 10);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
@@ -86,9 +101,15 @@ describe("ViewportScaledContainer - layout boundary scenarios (documented, not v
   );
 
   it("sets data-aspect-category to the correct value for a mocked ultra-wide viewport", () => {
+    // FRONTEND-QUALITY-GATE-BLOCKERS-R1: ViewportScaledContainer already renders a single <div>
+    // whose own text content is "content" and which itself carries data-aspect-category (verified
+    // directly: <div data-aspect-category="ultra-wide">content</div>) - screen.getByText("content")
+    // already returns that exact div. The original `.parentElement` stepped one level too high,
+    // to Testing Library's own render container, which has no such attribute. No production
+    // change was needed - ViewportScaledContainer already exposes this attribute correctly.
     mockViewport(5120, 1440);
     render(<ViewportScaledContainer>content</ViewportScaledContainer>);
-    const container = screen.getByText("content").parentElement;
+    const container = screen.getByText("content");
     expect(container).toHaveAttribute("data-aspect-category", "ultra-wide");
   });
 });

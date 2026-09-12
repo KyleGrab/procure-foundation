@@ -120,7 +120,7 @@ export function LoadingGears({
              not just remove decoration. Slowing it well below anything vestibular-triggering
              keeps the information without the motion intensity. This selector is intentionally
              NOT scoped to a single component instance (plain <style>, no CSS modules) - under
-             reduced motion, it slows every `animate-spin` SVG on the page, not just this one.
+             reduced motion, it slows every "animate-spin" SVG on the page, not just this one.
              That's a deliberate, acknowledged, unified UX choice, not an oversight: slowing all
              spinning icons together under a reduced-motion preference is a reasonable default
              even for elements outside this specific component. */

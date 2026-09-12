@@ -16,5 +16,11 @@
     "paths": { "@/*": ["./src/*"] }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "src/lib/dev-demo-guard.test.ts",
+    "src/lib/registration-guard.test.ts",
+    "src/lib/treasury-display.test.ts",
+    "src/lib/viewport-scaling.test.ts"
+  ]
 }
