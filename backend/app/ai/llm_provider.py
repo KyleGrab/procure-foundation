@@ -28,6 +28,17 @@ class LLMOutputParsingError(ProcureIQError):
     status_code = 502
 
 
+class LLMProviderUnavailableError(ProcureIQError):
+    """AI-PROVIDER-RESILIENCE-R1: the configured provider's SDK isn't installed in this
+    environment - a packaging/deployment gap (the 'ai' optional extra was never installed here),
+    never something to paper over. 503, not 500 - same "a dependency is down" signal as
+    app/db/session.py's DatabaseUnavailableError, which this mirrors. The client-facing message is
+    deliberately generic; the real cause (which package, which import path) belongs in server
+    logs via the original ModuleNotFoundError chained as __cause__, never in the response body."""
+    code = "ai_provider_unavailable"
+    status_code = 503
+
+
 class LLMProvider(ABC):
     @abstractmethod
     async def complete(self, *, system: str, prompt: str, max_tokens: int = 1500) -> str: ...
@@ -69,7 +80,17 @@ def _strip_markdown_fences(text: str) -> str:
 
 class AnthropicProvider(LLMProvider):
     async def complete(self, *, system: str, prompt: str, max_tokens: int = 1500) -> str:
-        import anthropic  # local import: optional dependency until this path actually runs
+        try:
+            import anthropic  # local import: optional dependency until this path actually runs
+        except ModuleNotFoundError as exc:
+            # Narrow, deliberately: only the 'anthropic' package itself missing is provider
+            # unavailability. If anthropic IS installed but one of ITS OWN transitive imports is
+            # missing (a broken install, an incompatible environment), exc.name is that other
+            # module's name, not "anthropic" - re-raise unmasked, since that's a real,
+            # diagnosable bug this error boundary must never hide behind a generic 503.
+            if exc.name != "anthropic":
+                raise
+            raise LLMProviderUnavailableError("AI provider is currently unavailable") from exc
 
         settings = get_settings()
         client = anthropic.AsyncAnthropic(api_key=settings.llm_api_key)

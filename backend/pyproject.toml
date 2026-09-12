@@ -30,6 +30,19 @@ dev = [
     "black>=24.10",
     "testcontainers[postgres]>=4.8",  # backend/tests/test_rls_integration.py - see ADR-011
 ]
+# AI-PROVIDER-RESILIENCE-R1: optional, not a base dependency - app/ai/llm_provider.py's
+# AnthropicProvider imports this lazily, only when a real completion is actually attempted (never
+# at app startup, never before the ACCESS_AI permission check). An environment that never intends
+# to serve real Copilot/negotiation-brief traffic through the Anthropic provider needs nothing
+# here; one that does must install this extra explicitly (`pip install -e ".[ai]"`), or every
+# authorised AI request fails closed with a structured 503 (LLMProviderUnavailableError) instead
+# of the SDK simply not existing. 0.34.0 is the minimum version confirmed to support the exact
+# shape this provider calls - AsyncAnthropic, client.messages.create(model=, max_tokens=, system=,
+# messages=[...]), and response.content blocks carrying .type/.text - not "latest", which this
+# sandbox has no way to verify without a live index lookup.
+ai = [
+    "anthropic>=0.34.0",
+]
 
 [build-system]
 requires = ["setuptools>=68"]
