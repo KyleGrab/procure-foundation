@@ -59,7 +59,7 @@ async def ingest_route_profitability(
     await audit_service.record(
         db, organisation_id=organisation_id, user_id=user_id,
         action="route_profitability_corrected" if corrects_id else "route_profitability_ingested",
-        entity_type="route_profitability_snapshot", entity_id=snapshot.id,
+        entity_type="route_profitability_snapshot", entity_id=str(snapshot.id),
         context={"trip_date": trip_date.isoformat(), "vehicle_registration": vehicle_registration},
     )
     await db.commit()

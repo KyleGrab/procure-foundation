@@ -49,7 +49,7 @@ async def ingest_fx_transaction(
     await audit_service.record(
         db, organisation_id=organisation_id, user_id=user_id,
         action="fx_transaction_corrected" if corrects_id else "fx_transaction_ingested",
-        entity_type="fx_transaction_snapshot", entity_id=snapshot.id,
+        entity_type="fx_transaction_snapshot", entity_id=str(snapshot.id),
         context={"currency_code": currency_code, "is_hedged": result["is_hedged"]},
     )
     await db.commit()

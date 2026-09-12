@@ -72,6 +72,22 @@ class InvalidImportFileError(ProcureIQError):
     status_code = 422
 
 
+class InvalidAuditIdentifierError(ProcureIQError):
+    """
+    AUDIT-ENTITY-ID-R2: raised by app.services.audit_service.record when entity_id is none of
+    its supported types (str, int, uuid.UUID, or None). Always an internal-caller bug, never
+    something real request input can trigger directly (no route accepts an arbitrary entity_id
+    from a client) - 500, not a 4xx, matching that distinction. Deliberately narrow rather than a
+    blanket str(anything): a caller passing e.g. a whole ORM object or a dict here almost always
+    means a real mistake (the wrong variable, an unresolved object instead of its id) that a
+    permissive str() would silently paper over as some unhelpful repr() text instead of failing
+    where the mistake actually is.
+    """
+
+    code = "invalid_audit_identifier"
+    status_code = 500
+
+
 class DatabaseUnavailableError(ProcureIQError):
     """
     A real, previously-unhandled gap: a Postgres connection/transaction failure inside get_db
