@@ -25,11 +25,15 @@ const STATUS_BADGE: Record<string, BadgeVariant> = {
 
 /**
  * "Recent Audit Activity" per the spec - sourced from duplicate-SKU and supplier-consolidation
- * flags (app.services.duplicate_detection_service, built this turn), since those are exactly
- * spec §107/§22's human-review-required flags, the closest real data this backend has to an
- * "approve/reject a finding" audit feed. Approve/Reject here calls the real review endpoint
- * (spec's own never-silently-merge principle - confirming here doesn't auto-merge anything
- * downstream, it only records the human decision, same as the backend's own docstring says).
+ * flags (app.services.duplicate_detection_service), since those are exactly spec §107/§22's
+ * human-review-required flags, the closest real data this backend has to an "approve/reject a
+ * finding" audit feed. Every action here calls the real, published review endpoint for its flag
+ * type (spec's own never-silently-merge principle - confirming here doesn't auto-merge suppliers,
+ * reassign anything, or write a financial fact; it only records the human decision, same as the
+ * backend's own docstrings say). Duplicate-SKU flags are a binary confirm/reject
+ * (reviewDuplicateSkuFlag); consolidation flags are a 3-state action
+ * (reviewConsolidationFlag - CONSOLIDATION-REVIEW-UI-R1) since spec §22 treats consolidation as a
+ * broader human workflow, not a yes/no.
  */
 export function AuditActivityTable() {
   const [rows, setRows] = useState<ActivityRow[] | null>(null);
@@ -62,20 +66,35 @@ export function AuditActivityTable() {
     load();
   }, []);
 
-  async function handleDecision(row: ActivityRow, confirmed: boolean) {
-    if (row.type === "consolidation") {
-      // No review route exists for supplier-consolidation flags yet (only duplicate-SKU flags
-      // got one this turn - app.services.duplicate_detection_service has no equivalent "confirm/
-      // reject" function for consolidation, since spec §22 treats consolidation as a flag for a
-      // broader human workflow - service risk, geographic coverage, resilience - not a binary
-      // yes/no the way a duplicate-SKU pair is). Buttons for this row type are disabled below
-      // rather than silently no-opping on click.
-      return;
-    }
+  async function handleDuplicateSkuDecision(row: ActivityRow, confirmed: boolean) {
     setActioning(row.publicId);
     try {
       await opportunitiesApi.reviewDuplicateSkuFlag(row.publicId, confirmed);
-      await load();
+      await load(); // re-fetch from the backend - never guess the resulting status client-side
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not record the review decision");
+    } finally {
+      setActioning(null);
+    }
+  }
+
+  // CONSOLIDATION-REVIEW-UI-R1: wires the real, published review route
+  // (POST /opportunities/consolidation-flags/{id}/review) via opportunitiesApi.reviewConsolidationFlag
+  // - a 3-state action (mark_under_review/recommend_consolidation/reject), not a binary confirm
+  // the way duplicate-SKU flags work, since spec §22 treats consolidation as a broader human
+  // workflow (service risk, geographic coverage, supply resilience). Records a review decision
+  // only - never merges suppliers, reassigns anything, or writes a financial fact; the backend's
+  // own state machine (app.analytics.domain_graph) is the sole authority on which transitions are
+  // valid, and 409s from it surface here as the same safe, structured error message apiFetch
+  // already extracts for every other action in this table.
+  async function handleConsolidationDecision(
+    row: ActivityRow, action: "mark_under_review" | "recommend_consolidation" | "reject",
+  ) {
+    setActioning(row.publicId);
+    setError(null);
+    try {
+      await opportunitiesApi.reviewConsolidationFlag(row.publicId, action);
+      await load(); // re-fetch from the backend - never guess the resulting status client-side
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not record the review decision");
     } finally {
@@ -119,21 +138,23 @@ export function AuditActivityTable() {
                     <Badge variant={STATUS_BADGE[row.status] ?? "neutral"}>{row.status.replace("_", " ")}</Badge>
                   </TableCell>
                   <TableCell>
-                    {row.status === "flagged" ? (
+                    {row.status !== "flagged" ? (
+                      <span className="text-xs text-slate-600">—</span>
+                    ) : row.type === "duplicate_sku" ? (
                       <div className="flex gap-2">
                         <button
-                          disabled={actioning === row.publicId || row.type === "consolidation"}
-                          onClick={() => handleDecision(row, true)}
-                          title={row.type === "consolidation" ? "Consolidation review isn't wired up yet" : "Approve"}
+                          disabled={actioning === row.publicId}
+                          onClick={() => handleDuplicateSkuDecision(row, true)}
+                          title="Approve"
                           className="rounded-md border border-emerald-500/20 bg-emerald-500/10 p-1 text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-40"
                           aria-label="Approve"
                         >
                           <Check className="h-3.5 w-3.5" />
                         </button>
                         <button
-                          disabled={actioning === row.publicId || row.type === "consolidation"}
-                          onClick={() => handleDecision(row, false)}
-                          title={row.type === "consolidation" ? "Consolidation review isn't wired up yet" : "Reject"}
+                          disabled={actioning === row.publicId}
+                          onClick={() => handleDuplicateSkuDecision(row, false)}
+                          title="Reject"
                           className="rounded-md border border-rose-500/20 bg-rose-500/10 p-1 text-rose-400 hover:bg-rose-500/20 disabled:opacity-40"
                           aria-label="Reject"
                         >
@@ -141,7 +162,32 @@ export function AuditActivityTable() {
                         </button>
                       </div>
                     ) : (
-                      <span className="text-xs text-slate-600">—</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        <button
+                          disabled={actioning === row.publicId}
+                          onClick={() => handleConsolidationDecision(row, "mark_under_review")}
+                          title="Records a review decision only - does not merge suppliers, reassign anything, or write a financial fact"
+                          className="rounded-md border border-[#1F2438] bg-[#0B0D17] px-2 py-1 text-[11px] text-slate-300 hover:border-indigo-500/40 hover:text-indigo-400 disabled:opacity-40"
+                        >
+                          Mark under review
+                        </button>
+                        <button
+                          disabled={actioning === row.publicId}
+                          onClick={() => handleConsolidationDecision(row, "recommend_consolidation")}
+                          title="Records a review decision only - does not merge suppliers, reassign anything, or write a financial fact"
+                          className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-[11px] text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-40"
+                        >
+                          Recommend consolidation
+                        </button>
+                        <button
+                          disabled={actioning === row.publicId}
+                          onClick={() => handleConsolidationDecision(row, "reject")}
+                          title="Records a review decision only - does not merge suppliers, reassign anything, or write a financial fact"
+                          className="rounded-md border border-rose-500/20 bg-rose-500/10 px-2 py-1 text-[11px] text-rose-400 hover:bg-rose-500/20 disabled:opacity-40"
+                        >
+                          Reject
+                        </button>
+                      </div>
                     )}
                   </TableCell>
                 </TableRow>
