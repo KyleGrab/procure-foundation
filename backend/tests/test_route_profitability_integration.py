@@ -20,6 +20,7 @@ entirely - there's no existing convention to match here since nothing else in th
 tests a route this way, so this is a new, narrowly-scoped pattern, not a reused one.
 """
 import io
+from datetime import date
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -184,7 +185,7 @@ async def test_existing_records_are_unchanged_by_a_rejected_request(client, db_s
     db_session.add(user)
     await db_session.flush()
     seeded = RouteProfitabilitySnapshot(
-        organisation_id=org.id, trip_date="2026-01-01", revenue=1000, cogs=800, trade_spend=0,
+        organisation_id=org.id, trip_date=date(2026, 1, 1), revenue=1000, cogs=800, trade_spend=0,
         revenue_basis="gross", trip_fixed_costs=50, distance_variable_costs=20, activity_time_costs=10,
         net_net_profit=120, is_net_revenue_negative=False, uploaded_by_user_id=user.id,
     )
