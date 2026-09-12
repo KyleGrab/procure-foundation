@@ -136,7 +136,12 @@ POST /opportunities/duplicate-sku-scan/{supplier_id}           spec §107 - reus
 GET  /opportunities/duplicate-sku-flags?status=
 POST /opportunities/duplicate-sku-flags/{id}/review?confirmed=  the never-silently-merge human confirmation gate
 POST /opportunities/consolidation-scan                          spec §22 - cross-supplier, flags only, never auto-recommended
-GET  /opportunities/consolidation-flags?status=                 (no review route yet for these - noted, not silently missing)
+GET  /opportunities/consolidation-flags?status=
+POST /opportunities/consolidation-flags/{id}/review            body {action, notes?} - action is one of
+                                                                mark_under_review/recommend_consolidation/reject, validated
+                                                                by a pure state machine (app.analytics.domain_graph) before
+                                                                any write; flags only - never auto-merges suppliers or
+                                                                writes a financial fact (CONSOLIDATION-FLAG-REVIEW-R1)
 
 GET  /savings-register?savings_type=                          reporting view over /opportunities, not a separate table
 GET  /savings-register/waterfall                               per-stage totals (spec §85 — never a blended running total)
