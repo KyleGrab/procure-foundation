@@ -121,7 +121,8 @@ class TestDeterminism(unittest.TestCase):
         # the pure function) before it ever ships, not just when a test happens to notice output
         # changed. Same category of regression-proofing as §9's named historical fixtures.
         import app.analytics.domain_graph as module
-        source = open(module.__file__).read()
+        with open(module.__file__) as f:
+            source = f.read()
         self.assertNotIn("import datetime", source)
         self.assertNotIn("from datetime", source)
         self.assertNotIn("import time", source)

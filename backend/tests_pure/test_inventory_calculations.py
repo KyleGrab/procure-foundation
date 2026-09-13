@@ -156,7 +156,8 @@ class TestDeterminism(unittest.TestCase):
 
         import app.analytics.inventory_calculations as module
 
-        tree = ast.parse(open(module.__file__).read())
+        with open(module.__file__) as f:
+            tree = ast.parse(f.read())
         forbidden_calls = [
             node.attr for node in ast.walk(tree)
             if isinstance(node, ast.Attribute) and node.attr in ("now", "today")
