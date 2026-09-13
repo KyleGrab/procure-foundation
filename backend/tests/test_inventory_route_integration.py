@@ -8,8 +8,6 @@ docstring for that last one).
 """
 import io
 
-import pytest
-
 from app.core.security import decode_access_token
 from app.db.models import Location
 

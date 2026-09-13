@@ -19,7 +19,10 @@ from __future__ import annotations
 import unittest
 from decimal import Decimal
 
-from app.analytics.revenue_waterfall import GrossToNetWaterfallInput, calculate_gross_to_net_waterfall
+from app.analytics.revenue_waterfall import (
+    GrossToNetWaterfallInput,
+    calculate_gross_to_net_waterfall,
+)
 
 
 class TestGrossToNetWaterfall(unittest.TestCase):
@@ -30,8 +33,8 @@ class TestGrossToNetWaterfall(unittest.TestCase):
             gross_sales=Decimal("364588837.16"),
             settlement_discounts=Decimal("8240399.16"),       # real: "Less: Discount allowed" TTM
             volume_growth_rebates=Decimal("3145913.07"),      # real: "Less: Rebates Paid" TTM
-            credit_notes_issued=Decimal("0"), operational_claims_returns=Decimal("0"),
-            retro_pricing_adjustment=Decimal("0"), supplier_recoveries_allowances=Decimal("0"),
+            credit_notes_issued=Decimal(0), operational_claims_returns=Decimal(0),
+            retro_pricing_adjustment=Decimal(0), supplier_recoveries_allowances=Decimal(0),
         ))
         self.assertTrue(result["is_complete"])
         self.assertEqual(result["net_revenue"], Decimal("353202524.9300"))  # real TTM Net Sales, exact match
@@ -40,11 +43,11 @@ class TestGrossToNetWaterfall(unittest.TestCase):
         # [DEMO] - the four non-real lines get illustrative figures here to exercise the full
         # chain shape; never presented as real deductions this business has actually recorded.
         result = calculate_gross_to_net_waterfall(GrossToNetWaterfallInput(
-            gross_sales=Decimal("100000"),
-            settlement_discounts=Decimal("2000"), volume_growth_rebates=Decimal("3000"),
-            credit_notes_issued=Decimal("1500"), operational_claims_returns=Decimal("800"),
-            retro_pricing_adjustment=Decimal("-200"),  # a downward retro-price correction
-            supplier_recoveries_allowances=Decimal("600"),
+            gross_sales=Decimal(100000),
+            settlement_discounts=Decimal(2000), volume_growth_rebates=Decimal(3000),
+            credit_notes_issued=Decimal(1500), operational_claims_returns=Decimal(800),
+            retro_pricing_adjustment=Decimal(-200),  # a downward retro-price correction
+            supplier_recoveries_allowances=Decimal(600),
         ))
         # 100000 - 2000 - 3000 - 1500 - 800 - 200 + 600 = 93100
         self.assertEqual(result["net_revenue"], Decimal("93100.0000"))
@@ -53,10 +56,10 @@ class TestGrossToNetWaterfall(unittest.TestCase):
         # [DEMO]. An upward retro-price correction (a late price increase applied retroactively)
         # is a real, legitimate signed direction the field must support - not deduction-only.
         result = calculate_gross_to_net_waterfall(GrossToNetWaterfallInput(
-            gross_sales=Decimal("100000"),
-            settlement_discounts=Decimal("0"), volume_growth_rebates=Decimal("0"),
-            credit_notes_issued=Decimal("0"), operational_claims_returns=Decimal("0"),
-            retro_pricing_adjustment=Decimal("500"), supplier_recoveries_allowances=Decimal("0"),
+            gross_sales=Decimal(100000),
+            settlement_discounts=Decimal(0), volume_growth_rebates=Decimal(0),
+            credit_notes_issued=Decimal(0), operational_claims_returns=Decimal(0),
+            retro_pricing_adjustment=Decimal(500), supplier_recoveries_allowances=Decimal(0),
         ))
         self.assertEqual(result["net_revenue"], Decimal("100500.0000"))
 
@@ -64,10 +67,10 @@ class TestGrossToNetWaterfall(unittest.TestCase):
         # The core Gate A rule for this section: a None line is NOT treated as zero. is_complete
         # is False and net_revenue is None - a caller must not proceed to CTS/Net Net Margin.
         result = calculate_gross_to_net_waterfall(GrossToNetWaterfallInput(
-            gross_sales=Decimal("100000"),
-            settlement_discounts=Decimal("2000"), volume_growth_rebates=None,
-            credit_notes_issued=Decimal("0"), operational_claims_returns=Decimal("0"),
-            retro_pricing_adjustment=Decimal("0"), supplier_recoveries_allowances=Decimal("0"),
+            gross_sales=Decimal(100000),
+            settlement_discounts=Decimal(2000), volume_growth_rebates=None,
+            credit_notes_issued=Decimal(0), operational_claims_returns=Decimal(0),
+            retro_pricing_adjustment=Decimal(0), supplier_recoveries_allowances=Decimal(0),
         ))
         self.assertFalse(result["is_complete"])
         self.assertIsNone(result["net_revenue"])
@@ -75,10 +78,10 @@ class TestGrossToNetWaterfall(unittest.TestCase):
 
     def test_multiple_missing_lines_are_all_reported_together_not_just_the_first(self):
         result = calculate_gross_to_net_waterfall(GrossToNetWaterfallInput(
-            gross_sales=Decimal("100000"),
+            gross_sales=Decimal(100000),
             settlement_discounts=None, volume_growth_rebates=None,
-            credit_notes_issued=Decimal("0"), operational_claims_returns=None,
-            retro_pricing_adjustment=Decimal("0"), supplier_recoveries_allowances=Decimal("0"),
+            credit_notes_issued=Decimal(0), operational_claims_returns=None,
+            retro_pricing_adjustment=Decimal(0), supplier_recoveries_allowances=Decimal(0),
         ))
         self.assertFalse(result["is_complete"])
         self.assertEqual(
@@ -91,9 +94,9 @@ class TestGrossToNetWaterfall(unittest.TestCase):
         # rather than exercising a branch: omitting it is a TypeError at construction time.
         with self.assertRaises(TypeError):
             GrossToNetWaterfallInput(
-                settlement_discounts=Decimal("0"), volume_growth_rebates=Decimal("0"),
-                credit_notes_issued=Decimal("0"), operational_claims_returns=Decimal("0"),
-                retro_pricing_adjustment=Decimal("0"), supplier_recoveries_allowances=Decimal("0"),
+                settlement_discounts=Decimal(0), volume_growth_rebates=Decimal(0),
+                credit_notes_issued=Decimal(0), operational_claims_returns=Decimal(0),
+                retro_pricing_adjustment=Decimal(0), supplier_recoveries_allowances=Decimal(0),
             )
 
 

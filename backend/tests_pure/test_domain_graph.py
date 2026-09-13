@@ -30,7 +30,7 @@ def _suppliers():
 class TestNodeDeduplication(unittest.TestCase):
     def test_supplier_appearing_in_multiple_flags_produces_one_node(self):
         flags = [
-            ConsolidationFlagInput(1, 2, "Chicken Breast 5kg", "Chicken Breast 5kg", Decimal("0.92"), Decimal("50000"), "flagged"),
+            ConsolidationFlagInput(1, 2, "Chicken Breast 5kg", "Chicken Breast 5kg", Decimal("0.92"), Decimal(50000), "flagged"),
             ConsolidationFlagInput(1, 3, "Chicken Breast 5kg", "Poultry Fresh 5kg", Decimal("0.85"), None, "flagged"),
         ]
         graph = build_supplier_consolidation_graph(_suppliers(), flags)
@@ -42,9 +42,9 @@ class TestNodeDeduplication(unittest.TestCase):
 
 class TestEdgeWeightFallback(unittest.TestCase):
     def test_combined_spend_used_when_present(self):
-        flags = [ConsolidationFlagInput(1, 2, "A", "B", Decimal("0.90"), Decimal("120000"), "flagged")]
+        flags = [ConsolidationFlagInput(1, 2, "A", "B", Decimal("0.90"), Decimal(120000), "flagged")]
         graph = build_supplier_consolidation_graph(_suppliers(), flags)
-        self.assertEqual(graph.edges[0].weight, Decimal("120000"))
+        self.assertEqual(graph.edges[0].weight, Decimal(120000))
 
     def test_falls_back_to_similarity_score_when_spend_is_none(self):
         flags = [ConsolidationFlagInput(1, 2, "A", "B", Decimal("0.90"), None, "flagged")]
@@ -59,12 +59,12 @@ class TestRawMetricsPreservedAlongsideWeight(unittest.TestCase):
     regardless of which one weight ended up resolving to."""
 
     def test_both_raw_fields_present_when_combined_spend_known(self):
-        flags = [ConsolidationFlagInput(1, 2, "A", "B", Decimal("0.90"), Decimal("120000"), "flagged")]
+        flags = [ConsolidationFlagInput(1, 2, "A", "B", Decimal("0.90"), Decimal(120000), "flagged")]
         graph = build_supplier_consolidation_graph(_suppliers(), flags)
         edge = graph.edges[0]
         self.assertEqual(edge.similarity_score, Decimal("0.90"))
-        self.assertEqual(edge.combined_spend, Decimal("120000"))
-        self.assertEqual(edge.weight, Decimal("120000"))  # weight still resolves to spend
+        self.assertEqual(edge.combined_spend, Decimal(120000))
+        self.assertEqual(edge.weight, Decimal(120000))  # weight still resolves to spend
 
     def test_similarity_score_present_and_combined_spend_none_when_unknown(self):
         flags = [ConsolidationFlagInput(1, 2, "A", "B", Decimal("0.85"), None, "flagged")]
@@ -108,7 +108,7 @@ class TestDeterminism(unittest.TestCase):
     def test_identical_input_produces_byte_identical_output(self):
         # §7.3: same input, called twice, must produce equal output - the functional proof.
         flags = [
-            ConsolidationFlagInput(1, 2, "A", "B", Decimal("0.90"), Decimal("50000"), "flagged"),
+            ConsolidationFlagInput(1, 2, "A", "B", Decimal("0.90"), Decimal(50000), "flagged"),
             ConsolidationFlagInput(2, 3, "C", "D", Decimal("0.85"), None, "under_review"),
         ]
         first = build_supplier_consolidation_graph(_suppliers(), flags)

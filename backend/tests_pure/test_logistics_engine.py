@@ -26,9 +26,9 @@ from decimal import Decimal
 from app.analytics.logistics_engine import calculate_segregated_route_cost
 
 # [DEMO] split, REAL total_trip_cost_pool (CAA 127155, West Coast, confirmed real this engagement)
-DEMO_STEM_KM = Decimal("15")
-DEMO_DROP_KM = Decimal("25")
-DEMO_RETURN_KM = Decimal("15")
+DEMO_STEM_KM = Decimal(15)
+DEMO_DROP_KM = Decimal(25)
+DEMO_RETURN_KM = Decimal(15)
 REAL_TRIP_COST_POOL = Decimal("36686.08")
 
 
@@ -49,8 +49,8 @@ class TestCalculateSegregatedRouteCost(unittest.TestCase):
         # route with high stem-km and genuinely zero drop-km (one delivery stop) is real and
         # must compute successfully, not raise. All real cost lands in the fixed stem allocation.
         result = calculate_segregated_route_cost(
-            stem_distance_km=Decimal("40"), drop_distance_km=Decimal("0"),
-            return_distance_km=Decimal("40"), total_trip_cost_pool=REAL_TRIP_COST_POOL,
+            stem_distance_km=Decimal(40), drop_distance_km=Decimal(0),
+            return_distance_km=Decimal(40), total_trip_cost_pool=REAL_TRIP_COST_POOL,
         )
         self.assertEqual(result["variable_drop_cost"], Decimal("0.0000"))
         self.assertEqual(result["fixed_stem_cost"], REAL_TRIP_COST_POOL)
@@ -58,14 +58,14 @@ class TestCalculateSegregatedRouteCost(unittest.TestCase):
     def test_negative_drop_km_is_refused(self):
         with self.assertRaises(ValueError):
             calculate_segregated_route_cost(
-                stem_distance_km=DEMO_STEM_KM, drop_distance_km=Decimal("-5"),
+                stem_distance_km=DEMO_STEM_KM, drop_distance_km=Decimal(-5),
                 return_distance_km=DEMO_RETURN_KM, total_trip_cost_pool=REAL_TRIP_COST_POOL,
             )
 
     def test_zero_stem_km_is_refused_a_delivery_trip_must_leave_the_depot(self):
         with self.assertRaises(ValueError):
             calculate_segregated_route_cost(
-                stem_distance_km=Decimal("0"), drop_distance_km=DEMO_DROP_KM,
+                stem_distance_km=Decimal(0), drop_distance_km=DEMO_DROP_KM,
                 return_distance_km=DEMO_RETURN_KM, total_trip_cost_pool=REAL_TRIP_COST_POOL,
             )
 
@@ -73,14 +73,14 @@ class TestCalculateSegregatedRouteCost(unittest.TestCase):
         with self.assertRaises(ValueError):
             calculate_segregated_route_cost(
                 stem_distance_km=DEMO_STEM_KM, drop_distance_km=DEMO_DROP_KM,
-                return_distance_km=Decimal("0"), total_trip_cost_pool=REAL_TRIP_COST_POOL,
+                return_distance_km=Decimal(0), total_trip_cost_pool=REAL_TRIP_COST_POOL,
             )
 
     def test_zero_or_negative_cost_pool_is_refused(self):
         with self.assertRaises(ValueError):
             calculate_segregated_route_cost(
                 stem_distance_km=DEMO_STEM_KM, drop_distance_km=DEMO_DROP_KM,
-                return_distance_km=DEMO_RETURN_KM, total_trip_cost_pool=Decimal("0"),
+                return_distance_km=DEMO_RETURN_KM, total_trip_cost_pool=Decimal(0),
             )
 
     def test_missing_any_parameter_is_a_type_error_not_a_fabricated_zero(self):
@@ -97,8 +97,8 @@ class TestCalculateSegregatedRouteCost(unittest.TestCase):
         # zero-denominator case from ever being reachable, not just handles it gracefully if hit.
         with self.assertRaises(ValueError):
             calculate_segregated_route_cost(
-                stem_distance_km=Decimal("0"), drop_distance_km=Decimal("0"),
-                return_distance_km=Decimal("0"), total_trip_cost_pool=REAL_TRIP_COST_POOL,
+                stem_distance_km=Decimal(0), drop_distance_km=Decimal(0),
+                return_distance_km=Decimal(0), total_trip_cost_pool=REAL_TRIP_COST_POOL,
             )
 
     def test_increasing_drop_km_with_stem_and_return_fixed_still_conserves_exactly(self):
@@ -107,7 +107,7 @@ class TestCalculateSegregatedRouteCost(unittest.TestCase):
         # docstring point 2, the shared rate genuinely changes as total distance changes), but
         # the real, provable invariant - conservation holds at every drop-km value, and the
         # stem/return INPUT figures themselves are never mutated by the calculation.
-        for drop_km in (Decimal("10"), Decimal("25"), Decimal("60"), Decimal("100")):
+        for drop_km in (Decimal(10), Decimal(25), Decimal(60), Decimal(100)):
             with self.subTest(drop_km=drop_km):
                 result = calculate_segregated_route_cost(
                     stem_distance_km=DEMO_STEM_KM, drop_distance_km=drop_km,
@@ -124,11 +124,11 @@ class TestCalculateSegregatedRouteCost(unittest.TestCase):
         # genuinely decreases in Rand terms as drop_km grows, even though stem/return themselves
         # never change.
         low_drop = calculate_segregated_route_cost(
-            stem_distance_km=DEMO_STEM_KM, drop_distance_km=Decimal("10"),
+            stem_distance_km=DEMO_STEM_KM, drop_distance_km=Decimal(10),
             return_distance_km=DEMO_RETURN_KM, total_trip_cost_pool=REAL_TRIP_COST_POOL,
         )
         high_drop = calculate_segregated_route_cost(
-            stem_distance_km=DEMO_STEM_KM, drop_distance_km=Decimal("100"),
+            stem_distance_km=DEMO_STEM_KM, drop_distance_km=Decimal(100),
             return_distance_km=DEMO_RETURN_KM, total_trip_cost_pool=REAL_TRIP_COST_POOL,
         )
         self.assertGreater(low_drop["fixed_stem_cost"], high_drop["fixed_stem_cost"])

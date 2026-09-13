@@ -11,7 +11,6 @@ not executed in this sandbox.
 """
 from decimal import Decimal
 
-import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 

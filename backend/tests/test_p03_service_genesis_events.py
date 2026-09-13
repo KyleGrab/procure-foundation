@@ -79,7 +79,7 @@ async def test_rebate_period_actual_genesis_event_has_all_old_fields_null(db_ses
     org, user, agreement = await _make_rebate_prereqs(db_session)
 
     payload = RebatePeriodActualCreate(
-        period_start=date(2026, 1, 1), period_end=date(2026, 3, 31), actual_spend=Decimal("0"),
+        period_start=date(2026, 1, 1), period_end=date(2026, 3, 31), actual_spend=Decimal(0),
     )
     period_actual = await record_period_actual(
         db_session, organisation_id=org.id, user_id=user.id, agreement=agreement, payload=payload,
@@ -110,12 +110,12 @@ async def test_rebate_period_actual_genesis_event_has_all_old_fields_null(db_ses
 async def test_rebate_period_actual_version_2_old_fields_match_version_1_new_fields(db_session):
     from app.db.models import FinancialAmountStatusEvent
     from app.schemas.rebate import RebatePeriodActualCreate
-    from app.services.rebate_service import record_period_actual, recalculate_expected
+    from app.services.rebate_service import recalculate_expected, record_period_actual
 
     org, user, agreement = await _make_rebate_prereqs(db_session)
 
     payload = RebatePeriodActualCreate(
-        period_start=date(2026, 1, 1), period_end=date(2026, 3, 31), actual_spend=Decimal("0"),
+        period_start=date(2026, 1, 1), period_end=date(2026, 3, 31), actual_spend=Decimal(0),
     )
     period_actual = await record_period_actual(
         db_session, organisation_id=org.id, user_id=user.id, agreement=agreement, payload=payload,
@@ -129,7 +129,7 @@ async def test_rebate_period_actual_version_2_old_fields_match_version_1_new_fie
     )).scalar_one()
 
     # A real recalculation, through the actual production path - not a hand-written event.
-    period_actual.actual_spend = Decimal("50000")
+    period_actual.actual_spend = Decimal(50000)
     await recalculate_expected(
         db_session, agreement=agreement, period_actual=period_actual, actor_user_id=user.id,
         change_reference=f"test_recalc:{period_actual.id}", change_reason_code="recalculation",
@@ -167,7 +167,7 @@ async def test_opportunity_genesis_events_have_all_old_fields_null(db_session):
 
     payload = OpportunityCreate(
         title="P03-CORE-R1 Service Opportunity", opportunity_type="price_increase_challenge",
-        annual_financial_impact=Decimal("12000"), annual_financial_impact_effective_from=date(2026, 1, 1),
+        annual_financial_impact=Decimal(12000), annual_financial_impact_effective_from=date(2026, 1, 1),
     )
     opportunity = await create_opportunity(db_session, organisation_id=org.id, user_id=user.id, payload=payload)
 
@@ -208,7 +208,11 @@ async def test_opportunity_genesis_events_have_all_old_fields_null(db_session):
 async def test_opportunity_realised_savings_version_2_old_fields_match_version_1_new_fields(db_session):
     from app.db.models import FinancialAmountStatusEvent
     from app.schemas.opportunity import OpportunityCreate
-    from app.services.opportunity_service import advance_waterfall_stage, create_opportunity, record_realised_savings
+    from app.services.opportunity_service import (
+        advance_waterfall_stage,
+        create_opportunity,
+        record_realised_savings,
+    )
 
     org, user = await _make_opp_prereqs(db_session)
 
@@ -229,7 +233,7 @@ async def test_opportunity_realised_savings_version_2_old_fields_match_version_1
 
     opportunity = await record_realised_savings(
         db_session, organisation_id=org.id, user_id=user.id, opportunity=opportunity,
-        realised_savings=Decimal("5000"),
+        realised_savings=Decimal(5000),
         effective_period_start=date(2026, 1, 1), effective_period_end=date(2026, 3, 31),
         documented_baseline_reference="BASELINE-CORE-R1", actual_cost_source_reference="COST-CORE-R1",
         variance_calculation_reference="VAR-CORE-R1", change_reference=f"test_realised:{opportunity.id}",

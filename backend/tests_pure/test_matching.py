@@ -6,8 +6,11 @@ import unittest
 from decimal import Decimal
 
 from app.matching.exact_matcher import verify_exact_match_for_route_log
-from app.matching.route_log_validation import calculate_cost_per_drop, validate_route_log_plausibility
 from app.matching.review import is_authoritative, requires_human_review
+from app.matching.route_log_validation import (
+    calculate_cost_per_drop,
+    validate_route_log_plausibility,
+)
 from app.matching.scorer import CandidateItem, MatchMethod, MatchStatus, find_best_match
 
 
@@ -82,7 +85,7 @@ class TestRouteLogPlausibility(unittest.TestCase):
         violations = validate_route_log_plausibility(
             distance_km=Decimal("45.2"),  # [DEMO] - no real distance figure recorded for this trip
             stop_count=24, total_drop_weight_kg=Decimal("686.435"),
-            vehicle_max_payload_kg=Decimal("8000"),  # [DEMO] assumed capacity, not a documented real spec
+            vehicle_max_payload_kg=Decimal(8000),  # [DEMO] assumed capacity, not a documented real spec
         )
         self.assertEqual(violations, [])
 
@@ -90,8 +93,8 @@ class TestRouteLogPlausibility(unittest.TestCase):
         # The exact scenario named in this domain: zero km travelled but real, multiple drops -
         # cannot happen physically, must be flagged, never silently accepted as "efficient."
         violations = validate_route_log_plausibility(
-            distance_km=Decimal("0"), stop_count=24, total_drop_weight_kg=Decimal("686.435"),
-            vehicle_max_payload_kg=Decimal("8000"),
+            distance_km=Decimal(0), stop_count=24, total_drop_weight_kg=Decimal("686.435"),
+            vehicle_max_payload_kg=Decimal(8000),
         )
         self.assertIn("zero distance_km with stop_count > 0 - physically impossible", violations)
 
@@ -99,8 +102,8 @@ class TestRouteLogPlausibility(unittest.TestCase):
         # A genuinely idle vehicle (no trip logged) is not a plausibility violation - zero and
         # zero together are consistent with each other, unlike zero km with real drops.
         violations = validate_route_log_plausibility(
-            distance_km=Decimal("0"), stop_count=0, total_drop_weight_kg=Decimal("0"),
-            vehicle_max_payload_kg=Decimal("8000"),
+            distance_km=Decimal(0), stop_count=0, total_drop_weight_kg=Decimal(0),
+            vehicle_max_payload_kg=Decimal(8000),
         )
         self.assertEqual(violations, [])
 
@@ -111,14 +114,14 @@ class TestRouteLogPlausibility(unittest.TestCase):
         # aggregate fed into a single-trip capacity check, a real and plausible data-pipeline bug).
         violations = validate_route_log_plausibility(
             distance_km=Decimal("45.2"), stop_count=24, total_drop_weight_kg=Decimal("94284.424"),
-            vehicle_max_payload_kg=Decimal("8000"),
+            vehicle_max_payload_kg=Decimal(8000),
         )
         self.assertTrue(any("exceeds vehicle_max_payload_kg" in v for v in violations))
 
     def test_negative_distance_or_stop_count_is_always_flagged(self):
         violations = validate_route_log_plausibility(
-            distance_km=Decimal("-10"), stop_count=-1, total_drop_weight_kg=Decimal("100"),
-            vehicle_max_payload_kg=Decimal("8000"),
+            distance_km=Decimal(-10), stop_count=-1, total_drop_weight_kg=Decimal(100),
+            vehicle_max_payload_kg=Decimal(8000),
         )
         self.assertEqual(len(violations), 2)
 

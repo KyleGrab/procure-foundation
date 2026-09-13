@@ -58,13 +58,12 @@ def _app_dsn() -> str:
 
 
 def test_every_expected_tenant_isolation_policy_exists_and_is_empty_string_safe():
-    with psycopg.connect(_admin_dsn(), autocommit=True) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT tablename, cmd, permissive, roles, qual, with_check FROM pg_policies "
-                "WHERE schemaname='public' AND policyname='tenant_isolation'"
-            )
-            rows = {r[0]: r for r in cur.fetchall()}
+    with psycopg.connect(_admin_dsn(), autocommit=True) as conn, conn.cursor() as cur:
+        cur.execute(
+            "SELECT tablename, cmd, permissive, roles, qual, with_check FROM pg_policies "
+            "WHERE schemaname='public' AND policyname='tenant_isolation'"
+        )
+        rows = {r[0]: r for r in cur.fetchall()}
 
     assert set(rows.keys()) == EXPECTED_TENANT_ISOLATION_TABLES, (
         f"tenant_isolation policy set drifted from the independently-encoded expected set - "
@@ -87,14 +86,13 @@ def test_every_expected_tenant_isolation_policy_exists_and_is_empty_string_safe(
 
 
 def test_organisation_memberships_untouched_by_0023():
-    with psycopg.connect(_admin_dsn(), autocommit=True) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT policyname, cmd, qual, with_check FROM pg_policies "
-                "WHERE schemaname='public' AND tablename='organisation_memberships' "
-                "ORDER BY policyname"
-            )
-            rows = cur.fetchall()
+    with psycopg.connect(_admin_dsn(), autocommit=True) as conn, conn.cursor() as cur:
+        cur.execute(
+            "SELECT policyname, cmd, qual, with_check FROM pg_policies "
+            "WHERE schemaname='public' AND tablename='organisation_memberships' "
+            "ORDER BY policyname"
+        )
+        rows = cur.fetchall()
 
     by_name = {r[0]: r for r in rows}
     assert set(by_name) == {"self_membership_select", "tenant_isolation"}, by_name
@@ -132,15 +130,14 @@ def test_no_unexpected_rls_policies_were_added_or_removed():
 
 
 def test_procureiq_app_role_invariants_unchanged():
-    with psycopg.connect(_admin_dsn(), autocommit=True) as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname='procureiq_app'")
-            rolsuper, rolbypassrls = cur.fetchone()
-            cur.execute(
-                "SELECT count(*) FROM pg_class c JOIN pg_roles r ON r.oid = c.relowner "
-                "WHERE r.rolname='procureiq_app' AND c.relkind='r'"
-            )
-            owned = cur.fetchone()[0]
+    with psycopg.connect(_admin_dsn(), autocommit=True) as conn, conn.cursor() as cur:
+        cur.execute("SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname='procureiq_app'")
+        rolsuper, rolbypassrls = cur.fetchone()
+        cur.execute(
+            "SELECT count(*) FROM pg_class c JOIN pg_roles r ON r.oid = c.relowner "
+            "WHERE r.rolname='procureiq_app' AND c.relkind='r'"
+        )
+        owned = cur.fetchone()[0]
 
     assert rolsuper is False
     assert rolbypassrls is False
@@ -148,16 +145,15 @@ def test_procureiq_app_role_invariants_unchanged():
 
 
 def test_append_only_privileges_unchanged():
-    with psycopg.connect(_admin_dsn(), autocommit=True) as conn:
-        with conn.cursor() as cur:
-            for table, expected in EXPECTED_APPEND_ONLY_GRANTS.items():
-                cur.execute(
-                    "SELECT privilege_type FROM information_schema.role_table_grants "
-                    "WHERE grantee='procureiq_app' AND table_name=%s",
-                    (table,),
-                )
-                actual = {r[0] for r in cur.fetchall()}
-                assert actual == expected, f"{table}: expected grants {expected}, got {actual}"
+    with psycopg.connect(_admin_dsn(), autocommit=True) as conn, conn.cursor() as cur:
+        for table, expected in EXPECTED_APPEND_ONLY_GRANTS.items():
+            cur.execute(
+                "SELECT privilege_type FROM information_schema.role_table_grants "
+                "WHERE grantee='procureiq_app' AND table_name=%s",
+                (table,),
+            )
+            actual = {r[0] for r in cur.fetchall()}
+            assert actual == expected, f"{table}: expected grants {expected}, got {actual}"
 
 
 # --------------------------------------------------------------------------------------------

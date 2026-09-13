@@ -18,7 +18,6 @@ from app.core.security import decode_access_token
 from app.db.models import AuditLog, Organisation, User
 from app.services import audit_service
 from app.services.route_profitability_service import ingest_route_profitability
-from app.services.treasury_service import ingest_fx_transaction
 
 
 async def _register_org(client, email: str, org_name: str) -> tuple[str, int, int]:
@@ -162,8 +161,8 @@ class TestRouteProfitabilityWorkflowAuditCanonicalization:
 
         result = await ingest_route_profitability(
             db_session, organisation_id=org.id, user_id=user.id, trip_date=date(2026, 1, 1),
-            revenue=Decimal("1000"), cogs=Decimal("800"), trade_spend=Decimal("0"), revenue_basis="gross",
-            trip_fixed_costs=Decimal("50"), distance_variable_costs=Decimal("20"), activity_time_costs=Decimal("10"),
+            revenue=Decimal(1000), cogs=Decimal(800), trade_spend=Decimal(0), revenue_basis="gross",
+            trip_fixed_costs=Decimal(50), distance_variable_costs=Decimal(20), activity_time_costs=Decimal(10),
         )  # previously raised asyncpg.exceptions.DataError: expected str, got int
 
         row = await _latest_audit_row(db_session, organisation_id=org.id, action="route_profitability_ingested")

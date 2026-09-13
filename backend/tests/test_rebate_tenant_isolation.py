@@ -2,7 +2,6 @@
 rebate_period_actuals, purchase_transactions) - the same coverage test_contract_tenant_isolation.py
 gives contracts, applied to what Phase 4 added. Same live-Postgres requirement as the rest of
 backend/tests/ - not run in this sandbox."""
-import pytest
 
 
 async def _register_org_with_supplier(client, email: str, org_name: str) -> tuple[str, str]:

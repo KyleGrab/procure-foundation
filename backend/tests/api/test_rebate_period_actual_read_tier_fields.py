@@ -92,8 +92,8 @@ async def test_open_tiered_period_below_next_tier_returns_exact_progress(client)
     )
     # bands: 1000 (1%), 5000 (2%) - spend of 500 is below both, so the next reachable band is
     # 1000, with 500 remaining to reach it.
-    assert Decimal(body["next_tier_threshold"]) == Decimal("1000")
-    assert Decimal(body["amount_to_next_tier"]) == Decimal("500")
+    assert Decimal(body["next_tier_threshold"]) == Decimal(1000)
+    assert Decimal(body["amount_to_next_tier"]) == Decimal(500)
 
 
 @pytest.mark.integration
@@ -148,8 +148,8 @@ async def test_response_preserves_stored_financial_actuals_through_receipt(clien
     assert get_resp.status_code == 200
     assert get_resp.json()["actual_spend"] == "1500.0000"
     # 5000 - 1500 = 3500 remaining to the top band.
-    assert Decimal(get_resp.json()["next_tier_threshold"]) == Decimal("5000")
-    assert Decimal(get_resp.json()["amount_to_next_tier"]) == Decimal("3500")
+    assert Decimal(get_resp.json()["next_tier_threshold"]) == Decimal(5000)
+    assert Decimal(get_resp.json()["amount_to_next_tier"]) == Decimal(3500)
 
     receipt_resp = await client.post(
         f"/rebates/{agreement_public_id}/periods/{period['public_id']}/receipt",
@@ -163,8 +163,8 @@ async def test_response_preserves_stored_financial_actuals_through_receipt(clien
     assert receipt_body["period_actual"]["received_reference"] == "CN-TEST-001"
     # Still not at the top band - the receipt doesn't change actual_spend, so tier progress is
     # unaffected and must still be a real value, not lost or zeroed by this response path either.
-    assert Decimal(receipt_body["period_actual"]["next_tier_threshold"]) == Decimal("5000")
-    assert Decimal(receipt_body["period_actual"]["amount_to_next_tier"]) == Decimal("3500")
+    assert Decimal(receipt_body["period_actual"]["next_tier_threshold"]) == Decimal(5000)
+    assert Decimal(receipt_body["period_actual"]["amount_to_next_tier"]) == Decimal(3500)
 
 
 @pytest.mark.integration
@@ -187,8 +187,8 @@ async def test_closed_period_response_includes_complete_tier_fields(client):
     assert close_resp.status_code == 200
     body = close_resp.json()
     assert body["actual_spend"] == "800.0000"
-    assert Decimal(body["next_tier_threshold"]) == Decimal("1000")
-    assert Decimal(body["amount_to_next_tier"]) == Decimal("200")
+    assert Decimal(body["next_tier_threshold"]) == Decimal(1000)
+    assert Decimal(body["amount_to_next_tier"]) == Decimal(200)
 
 
 @pytest.mark.integration

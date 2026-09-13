@@ -13,7 +13,6 @@ Fix mirrors app/api/v1/opportunities.py's already-established pattern (a local, 
 not a shared import - each route stays its own thin file): explicit, RLS-scoped, batched
 select(Supplier.id, Supplier.public_id) plus explicit OpportunityRead construction.
 """
-import uuid
 
 import pytest
 

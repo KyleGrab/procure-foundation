@@ -18,7 +18,6 @@ agreement is reachable through this API today, and RebateAgreementRead.supplier_
 correctly stays required, not Optional - test 4 below proves the absence of that path rather
 than exercising a customer-side response (there is none to exercise).
 """
-import uuid
 
 import pytest
 

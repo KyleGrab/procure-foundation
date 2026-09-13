@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import os
 
-import asyncpg
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -25,7 +24,7 @@ os.environ.setdefault(
 )
 os.environ.setdefault("SECRET_KEY", "test-secret-key-not-for-production-use-only")
 
-from app.main import app  # noqa: E402
+from app.main import app
 
 
 def _admin_maintenance_dsn(database_url_sync: str) -> str:
@@ -196,7 +195,13 @@ async def p03_seed(db_session):
     import sqlalchemy as sa
 
     from app.db.models import (
-        Opportunity, Organisation, OrganisationMembership, RebateAgreement, RebatePeriodActual, Supplier, User,
+        Opportunity,
+        Organisation,
+        OrganisationMembership,
+        RebateAgreement,
+        RebatePeriodActual,
+        Supplier,
+        User,
     )
 
     org_a = Organisation(name="P-03 Test Org A", default_currency="ZAR", country="ZA")

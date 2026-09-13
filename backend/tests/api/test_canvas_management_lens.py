@@ -5,7 +5,6 @@ SQLite/mocks") - written following the established test_phase5_api.py pattern, n
 pytest itself still isn't installed in the sandbox that authored this file, on top of there being
 no live Postgres - both constraints unchanged all session.
 """
-import pytest
 
 
 async def _register_org(client, email: str, org_name: str) -> str:

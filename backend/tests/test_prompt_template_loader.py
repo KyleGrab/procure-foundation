@@ -8,8 +8,6 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-import pytest
-
 from app.ai.contract_extraction_service import extract_terms
 from app.ai.llm_provider import LLMProvider
 from app.ai.schemas import ContractExtractionOutput, ExtractedField, NegotiationBriefOutput
@@ -36,7 +34,7 @@ class _CapturingProvider(LLMProvider):
 _CONTEXT = NegotiationBriefContext(
     supplier_name="Gourmet Cape Distributors", annual_spend=Decimal("355848477.03"),
     weighted_increase_pct=Decimal("0.08"), total_annual_impact=Decimal("28467878.16"),
-    top_sku_impacts=[("Frozen Chicken Portions 2kg", Decimal("1200000"))],
+    top_sku_impacts=[("Frozen Chicken Portions 2kg", Decimal(1200000))],
     negotiation_targets=[("Frozen Chicken Portions 2kg", Decimal("45.00"))],
     supplier_performance_note="on-time delivery 94% over the last 12 months",
 )

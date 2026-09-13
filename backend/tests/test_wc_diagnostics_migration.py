@@ -42,14 +42,13 @@ def _run_alembic(*args: str, database_url: str, database_url_sync: str) -> None:
 
 
 def _terminate_and_drop(admin_dsn: str) -> None:
-    with psycopg.connect(admin_dsn, autocommit=True) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
-                "WHERE datname = %s AND pid <> pg_backend_pid()",
-                (_DB_NAME,),
-            )
-            cur.execute(sql.SQL("DROP DATABASE IF EXISTS {}").format(sql.Identifier(_DB_NAME)))
+    with psycopg.connect(admin_dsn, autocommit=True) as conn, conn.cursor() as cur:
+        cur.execute(
+            "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+            "WHERE datname = %s AND pid <> pg_backend_pid()",
+            (_DB_NAME,),
+        )
+        cur.execute(sql.SQL("DROP DATABASE IF EXISTS {}").format(sql.Identifier(_DB_NAME)))
 
 
 @pytest.fixture
@@ -58,9 +57,8 @@ def wc_migration_db():
     regardless of test outcome. Never touches the shared procureiq_test database."""
     admin_dsn = _admin_maintenance_dsn()
     _terminate_and_drop(admin_dsn)
-    with psycopg.connect(admin_dsn, autocommit=True) as conn:
-        with conn.cursor() as cur:
-            cur.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(_DB_NAME)))
+    with psycopg.connect(admin_dsn, autocommit=True) as conn, conn.cursor() as cur:
+        cur.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(_DB_NAME)))
 
     target_async = get_settings().database_url.rsplit("/", 1)[0] + f"/{_DB_NAME}"
     target_sync = get_settings().database_url_sync.rsplit("/", 1)[0] + f"/{_DB_NAME}"

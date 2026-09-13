@@ -1,6 +1,5 @@
 """Extends tenant isolation coverage to contracts (spec Section 33's pattern applied to Phase 3).
 Same live-Postgres requirement as the rest of backend/tests/ - not run in this sandbox."""
-import pytest
 
 
 async def _register_org_with_supplier_and_contract(client, email: str, org_name: str) -> tuple[str, str]:

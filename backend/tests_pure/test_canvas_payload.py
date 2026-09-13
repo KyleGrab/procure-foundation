@@ -21,16 +21,19 @@ from decimal import Decimal
 
 from app.analytics.canvas_payload import build_management_canvas_payload, build_widget_result
 from app.analytics.cash_forecast import build_13_week_cash_forecast
-from app.analytics.management_accounting import calculate_customer_net_margin, refuse_timing_bridge_allocation
+from app.analytics.management_accounting import (
+    calculate_customer_net_margin,
+    refuse_timing_bridge_allocation,
+)
 
 
 class TestBuildWidgetResult(unittest.TestCase):
     def test_successful_real_calculation_returns_ok_status_with_real_data(self):
         result = build_widget_result(
             calculate_customer_net_margin,
-            revenue=Decimal("100000"), cogs=Decimal("70000"),
-            direct_logistics_cost=Decimal("8000"), warehouse_abc_cost=Decimal("4000"),
-            trade_spend=Decimal("5000"), revenue_basis="gross",
+            revenue=Decimal(100000), cogs=Decimal(70000),
+            direct_logistics_cost=Decimal(8000), warehouse_abc_cost=Decimal(4000),
+            trade_spend=Decimal(5000), revenue_basis="gross",
         )
         self.assertEqual(result["status"], "ok")
         self.assertEqual(result["data"]["net_margin"], Decimal("13000.0000"))
@@ -43,7 +46,7 @@ class TestBuildWidgetResult(unittest.TestCase):
         result = build_widget_result(
             calculate_customer_net_margin,
             revenue=Decimal("353202524.93"), cogs=Decimal("287394425.05"),
-            direct_logistics_cost=Decimal("0"), warehouse_abc_cost=Decimal("0"),
+            direct_logistics_cost=Decimal(0), warehouse_abc_cost=Decimal(0),
             trade_spend=Decimal("3145913.07"), revenue_basis="net_of_waterfall",
         )
         self.assertEqual(result["status"], "diagnostic")
@@ -76,9 +79,9 @@ class TestBuildWidgetResult(unittest.TestCase):
 class TestBuildManagementCanvasPayload(unittest.TestCase):
     def _working_revenue_layer(self):
         return calculate_customer_net_margin(
-            revenue=Decimal("100000"), cogs=Decimal("70000"),
-            direct_logistics_cost=Decimal("8000"), warehouse_abc_cost=Decimal("4000"),
-            trade_spend=Decimal("5000"), revenue_basis="gross",
+            revenue=Decimal(100000), cogs=Decimal(70000),
+            direct_logistics_cost=Decimal(8000), warehouse_abc_cost=Decimal(4000),
+            trade_spend=Decimal(5000), revenue_basis="gross",
         )
 
     def _broken_liquidity_layer(self):
@@ -88,7 +91,7 @@ class TestBuildManagementCanvasPayload(unittest.TestCase):
 
     def _working_risk_layer(self):
         # [DEMO] figure (see module docstring) - real mechanism, illustrative number.
-        refuse_timing_bridge_allocation(variance=Decimal("0"), entity_reference=None)
+        refuse_timing_bridge_allocation(variance=Decimal(0), entity_reference=None)
         return {"timing_bridge_variance": Decimal("0.0000"), "is_isolated": True}
 
     def test_one_failing_layer_does_not_crash_the_whole_payload(self):

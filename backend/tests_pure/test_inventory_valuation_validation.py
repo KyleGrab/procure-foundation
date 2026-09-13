@@ -14,7 +14,6 @@ import unittest
 from decimal import Decimal
 
 from app.ingestion.inventory_valuation_mapping import (
-    INVENTORY_VALUATION_ALIASES,
     suggest_inventory_valuation_mapping,
 )
 from app.ingestion.inventory_valuation_validation import validate_inventory_valuation_rows
