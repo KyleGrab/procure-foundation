@@ -1,8 +1,13 @@
 /**
  * Demo-only call to action shown on the real Procurement lens (components/canvas/ProcureIQCanvas.tsx,
- * activeLens === "procurement") - the second discovery path into the illustrative Price Review
- * walkthrough alongside /price-reviews' own "Open illustrative walkthrough" link
- * (DemoWalkthroughEntry.tsx), so the walkthrough is never reachable only via a bare URL.
+ * activeLens === "procurement") - routes into the Procurement Command Centre
+ * (app/dashboard/procurement/page.tsx), the hub that itself hosts the primary "Open illustrative
+ * price review" CTA plus a secondary link into Price Reviews history. Previously linked straight
+ * to /price-reviews/demo; PROCUREIQ-PROCUREMENT-COMMAND-CENTRE-R1 inserts the Command Centre as
+ * the intended stop between the lens and the walkthrough, so this callout's copy and destination
+ * changed with it. Still a second discovery path into that journey alongside /price-reviews' own
+ * "Open illustrative walkthrough" link (DemoWalkthroughEntry.tsx) and the Command Centre's own
+ * Sidebar nav entry - the walkthrough is never reachable only via a bare URL.
  *
  * Gated by the same isDemoModeEnabled guard as every other demo entry point - invisible in a
  * production deployment with no NEXT_PUBLIC_DEMO_MODE flag, so real customers on the real
@@ -36,10 +41,10 @@ export function ProcurementLensDemoCallout({
         </p>
       </div>
       <Link
-        href="/price-reviews/demo"
+        href="/dashboard/procurement"
         className="inline-flex shrink-0 items-center justify-center rounded-md bg-indigo-500 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-300"
       >
-        Open illustrative price review
+        Open Procurement Command Centre
       </Link>
     </div>
   );

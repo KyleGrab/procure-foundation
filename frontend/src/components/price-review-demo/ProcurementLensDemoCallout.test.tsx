@@ -4,21 +4,21 @@ import "@testing-library/jest-dom";
 import { ProcurementLensDemoCallout } from "./ProcurementLensDemoCallout";
 
 describe("ProcurementLensDemoCallout", () => {
-  it("renders a working link straight to the illustrative price review in local development", () => {
+  it("renders a working link to the Procurement Command Centre in local development", () => {
     render(<ProcurementLensDemoCallout nodeEnv="development" demoModeFlag={undefined} />);
-    expect(screen.getByRole("link", { name: "Open illustrative price review" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Open Procurement Command Centre" })).toHaveAttribute(
       "href",
-      "/price-reviews/demo"
+      "/dashboard/procurement"
     );
   });
 
   it("also renders when NEXT_PUBLIC_DEMO_MODE is explicitly 'true'", () => {
     render(<ProcurementLensDemoCallout nodeEnv="production" demoModeFlag="true" />);
-    expect(screen.getByRole("link", { name: "Open illustrative price review" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open Procurement Command Centre" })).toBeInTheDocument();
   });
 
   it("renders nothing in a production build with no demo-mode flag - the default deployment case", () => {
     render(<ProcurementLensDemoCallout nodeEnv="production" demoModeFlag={undefined} />);
-    expect(screen.queryByRole("link", { name: "Open illustrative price review" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Open Procurement Command Centre" })).not.toBeInTheDocument();
   });
 });

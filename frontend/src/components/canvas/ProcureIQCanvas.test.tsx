@@ -29,13 +29,13 @@ afterEach(() => {
 });
 
 describe("ProcureIQCanvas - illustrative demo callout", () => {
-  it("shows a working link to the illustrative price review on the Procurement lens in demo mode", async () => {
+  it("shows a working link to the Procurement Command Centre on the Procurement lens in demo mode", async () => {
     vi.stubEnv("NODE_ENV", "development");
     mockLensParam = "procurement";
     render(<ProcureIQCanvas />);
-    expect(await screen.findByRole("link", { name: "Open illustrative price review" })).toHaveAttribute(
+    expect(await screen.findByRole("link", { name: "Open Procurement Command Centre" })).toHaveAttribute(
       "href",
-      "/price-reviews/demo"
+      "/dashboard/procurement"
     );
   });
 
@@ -44,7 +44,7 @@ describe("ProcureIQCanvas - illustrative demo callout", () => {
     mockLensParam = "management";
     render(<ProcureIQCanvas />);
     await screen.findByText("No data yet for this lens.");
-    expect(screen.queryByRole("link", { name: "Open illustrative price review" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Open Procurement Command Centre" })).not.toBeInTheDocument();
   });
 
   it("does not show the callout on the Operations lens", async () => {
@@ -52,7 +52,7 @@ describe("ProcureIQCanvas - illustrative demo callout", () => {
     mockLensParam = "operations";
     render(<ProcureIQCanvas />);
     await screen.findByText("No data yet for this lens.");
-    expect(screen.queryByRole("link", { name: "Open illustrative price review" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Open Procurement Command Centre" })).not.toBeInTheDocument();
   });
 
   it("does not show the callout in a production build with no demo-mode flag", async () => {
@@ -60,6 +60,6 @@ describe("ProcureIQCanvas - illustrative demo callout", () => {
     mockLensParam = "procurement";
     render(<ProcureIQCanvas />);
     await screen.findByText("No data yet for this lens.");
-    expect(screen.queryByRole("link", { name: "Open illustrative price review" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Open Procurement Command Centre" })).not.toBeInTheDocument();
   });
 });
