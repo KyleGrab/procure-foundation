@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -95,8 +96,8 @@ class PriceReviewLine(Base, TenantScopedMixin):
     old_supplier_sku: Mapped[str | None] = mapped_column(String(128))
     old_description: Mapped[str | None] = mapped_column(String(512))
     old_pack_raw: Mapped[str | None] = mapped_column(String(128))
-    old_price: Mapped[float | None] = mapped_column(Numeric(18, 4))
-    old_normalized_price: Mapped[float | None] = mapped_column(Numeric(18, 4))
+    old_price: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
+    old_normalized_price: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
     old_normalized_base_unit: Mapped[str | None] = mapped_column(String(8))
     old_source_row_ref: Mapped[dict | None] = mapped_column(JSONB)  # {file_id, row_number}
 
@@ -104,40 +105,40 @@ class PriceReviewLine(Base, TenantScopedMixin):
     new_supplier_sku: Mapped[str | None] = mapped_column(String(128))
     new_description: Mapped[str | None] = mapped_column(String(512))
     new_pack_raw: Mapped[str | None] = mapped_column(String(128))
-    new_price: Mapped[float | None] = mapped_column(Numeric(18, 4))
-    new_normalized_price: Mapped[float | None] = mapped_column(Numeric(18, 4))
+    new_price: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
+    new_normalized_price: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
     new_normalized_base_unit: Mapped[str | None] = mapped_column(String(8))
     new_source_row_ref: Mapped[dict | None] = mapped_column(JSONB)
 
     # --- matching (spec Section 8-11) ---
     match_status: Mapped[str] = mapped_column(String(32), nullable=False)  # matched|new_product|discontinued|review_required
     match_method: Mapped[str | None] = mapped_column(String(32))
-    match_confidence: Mapped[float | None] = mapped_column(Numeric(5, 4))
+    match_confidence: Mapped[Decimal | None] = mapped_column(Numeric(5, 4))
     match_confirmed_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     match_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # --- price movement (spec Section 12, analytics-methodology.md) ---
     movement_type: Mapped[str | None] = mapped_column(String(32))
-    absolute_change: Mapped[float | None] = mapped_column(Numeric(18, 4))
-    percentage_change: Mapped[float | None] = mapped_column(Numeric(9, 6))
+    absolute_change: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
+    percentage_change: Mapped[Decimal | None] = mapped_column(Numeric(9, 6))
     pack_changed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     risk_classification: Mapped[str | None] = mapped_column(String(16))
     comparison_basis: Mapped[str | None] = mapped_column(String(16))  # 'normalized'|'raw'|'unit_mismatch'
 
     # --- volume (spec Section 13; manual entry in this phase - see ADR-008) ---
-    historical_quantity: Mapped[float | None] = mapped_column(Numeric(18, 4))
-    annual_quantity: Mapped[float | None] = mapped_column(Numeric(18, 4))
+    historical_quantity: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
+    annual_quantity: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
     quantity_source: Mapped[str | None] = mapped_column(String(32))  # 'manual' | 'purchase_history'
     quantity_confidence: Mapped[str | None] = mapped_column(String(16))  # 'low'|'medium'|'high'
-    historical_spend: Mapped[float | None] = mapped_column(Numeric(18, 4))
-    annual_impact: Mapped[float | None] = mapped_column(Numeric(18, 4))
+    historical_spend: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
+    annual_impact: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
 
     # --- margin (spec Section 17-18) ---
-    selling_price: Mapped[float | None] = mapped_column(Numeric(18, 4))
-    old_margin_pct: Mapped[float | None] = mapped_column(Numeric(9, 6))
-    new_margin_pct: Mapped[float | None] = mapped_column(Numeric(9, 6))
-    margin_movement_pct: Mapped[float | None] = mapped_column(Numeric(9, 6))
-    annual_margin_impact: Mapped[float | None] = mapped_column(Numeric(18, 4))
+    selling_price: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
+    old_margin_pct: Mapped[Decimal | None] = mapped_column(Numeric(9, 6))
+    new_margin_pct: Mapped[Decimal | None] = mapped_column(Numeric(9, 6))
+    margin_movement_pct: Mapped[Decimal | None] = mapped_column(Numeric(9, 6))
+    annual_margin_impact: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
 
     # --- buyer workflow (spec Section 22-24) ---
     buyer_decision: Mapped[str | None] = mapped_column(String(16))  # accept|challenge|negotiate|investigate|ignore
@@ -145,7 +146,7 @@ class PriceReviewLine(Base, TenantScopedMixin):
     buyer_decision_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     buyer_decision_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    target_price: Mapped[float | None] = mapped_column(Numeric(18, 4))
-    potential_cost_avoidance: Mapped[float | None] = mapped_column(Numeric(18, 4))
-    final_negotiated_price: Mapped[float | None] = mapped_column(Numeric(18, 4))
-    actual_cost_avoidance: Mapped[float | None] = mapped_column(Numeric(18, 4))
+    target_price: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
+    potential_cost_avoidance: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
+    final_negotiated_price: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
+    actual_cost_avoidance: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
