@@ -28,7 +28,7 @@ export default function PriceReviewDemoNegotiationPage() {
       <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Illustrative walkthrough</p>
       <h1 className="mb-6 text-xl font-semibold text-slate-900">Negotiation — {DEMO_REVIEW.supplier_name}</h1>
 
-      <section className="mb-8 rounded border border-slate-200 p-4">
+      <section className="mb-8 rounded border p-4">
         <h2 className="mb-1 text-sm font-semibold text-slate-900">Illustrative negotiation brief (demo)</h2>
         <p className="mb-3 text-xs text-slate-500">
           Built from this walkthrough&apos;s own fabricated lines only — not AI-generated, and not
@@ -65,7 +65,7 @@ export default function PriceReviewDemoNegotiationPage() {
         </ul>
       </section>
 
-      <section className="rounded border border-dashed border-slate-300 p-4">
+      <section className="rounded border border-dashed p-4">
         <h2 className="mb-2 text-sm font-semibold text-slate-900">Live AI negotiation brief</h2>
         <p className="mb-3 text-sm text-slate-600">
           The real negotiation-brief endpoint is available for a real review, not this
@@ -74,7 +74,7 @@ export default function PriceReviewDemoNegotiationPage() {
         <button
           type="button"
           onClick={() => setLiveBriefRequested(true)}
-          className="rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="rounded border px-4 py-2 text-sm font-medium text-slate-700 hover:bg-[color:var(--app-surface-light-strong)]"
         >
           Generate live AI brief
         </button>

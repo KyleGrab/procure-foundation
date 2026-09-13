@@ -37,8 +37,8 @@ export function DemoDecisionControl({ lineId, decision, onDecide }: DemoDecision
             onClick={() => onDecide(lineId, key)}
             className={`rounded border px-3 py-1.5 text-xs font-medium ${
               decision === key
-                ? "border-slate-900 bg-slate-900 text-white"
-                : "border-slate-300 text-slate-700 hover:bg-slate-50"
+                ? "border-indigo-600 bg-indigo-600 text-white"
+                : "text-slate-700 hover:bg-[color:var(--app-surface-light-strong)]"
             }`}
           >
             {DECISION_LABELS[key]}

@@ -18,19 +18,19 @@ export default function PriceReviewDemoOverviewPage() {
       </p>
 
       <dl className="mb-8 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
-        <div className="rounded border border-slate-200 p-3">
+        <div className="rounded border p-3">
           <dt className="text-slate-500">Increase received</dt>
           <dd className="text-lg font-semibold text-slate-900">{DEMO_REVIEW.received_at}</dd>
         </div>
-        <div className="rounded border border-slate-200 p-3">
+        <div className="rounded border p-3">
           <dt className="text-slate-500">Status</dt>
           <dd className="text-lg font-semibold text-slate-900">{DEMO_REVIEW.status_label}</dd>
         </div>
-        <div className="rounded border border-slate-200 p-3">
+        <div className="rounded border p-3">
           <dt className="text-slate-500">Effective date</dt>
           <dd className="text-lg font-semibold text-slate-900">{DEMO_REVIEW.effective_date}</dd>
         </div>
-        <div className="rounded border border-slate-200 p-3">
+        <div className="rounded border p-3">
           <dt className="text-slate-500">Lines</dt>
           <dd className="text-lg font-semibold text-slate-900">{DEMO_REVIEW.line_count}</dd>
         </div>
@@ -38,19 +38,19 @@ export default function PriceReviewDemoOverviewPage() {
 
       <Link
         href={DEMO_REVIEW.next_action_href}
-        className="inline-block rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+        className="inline-block rounded bg-indigo-500 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-600"
       >
         {DEMO_REVIEW.next_action_label}
       </Link>
 
       <div className="mt-8 flex flex-col gap-2 text-sm">
-        <Link href="/price-reviews/demo/analysis" className="rounded border border-slate-200 p-3 hover:bg-slate-50">
+        <Link href="/price-reviews/demo/analysis" className="rounded border p-3 hover:bg-[color:var(--app-surface-light-strong)]">
           Analysis &amp; investigation
         </Link>
-        <Link href="/price-reviews/demo/negotiation" className="rounded border border-slate-200 p-3 hover:bg-slate-50">
+        <Link href="/price-reviews/demo/negotiation" className="rounded border p-3 hover:bg-[color:var(--app-surface-light-strong)]">
           Negotiation
         </Link>
-        <Link href="/price-reviews" className="rounded border border-slate-200 p-3 text-slate-600 hover:bg-slate-50">
+        <Link href="/price-reviews" className="rounded border p-3 text-slate-600 hover:bg-[color:var(--app-surface-light-strong)]">
           ← Back to Price Reviews
         </Link>
       </div>

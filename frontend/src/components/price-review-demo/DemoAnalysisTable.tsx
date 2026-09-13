@@ -47,7 +47,9 @@ export function DemoAnalysisTable({ lines, filter, onFilterChange, onSelectLine 
             aria-pressed={filter === f.key}
             onClick={() => onFilterChange(f.key)}
             className={`rounded border px-3 py-1 ${
-              filter === f.key ? "border-slate-900 bg-slate-900 text-white" : "border-slate-300 text-slate-700 hover:bg-slate-50"
+              filter === f.key
+                ? "border-indigo-600 bg-indigo-600 text-white"
+                : "text-slate-700 hover:bg-[color:var(--app-surface-light-strong)]"
             }`}
           >
             {f.label}

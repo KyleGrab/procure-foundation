@@ -45,7 +45,7 @@ export function LineDetailDrawer({ line, decision, onDecide, onClose }: LineDeta
         role="dialog"
         aria-modal="true"
         aria-labelledby="demo-line-detail-heading"
-        className="relative flex h-full w-full max-w-md flex-col overflow-y-auto border-l border-slate-200 bg-white p-6 shadow-xl"
+        className="relative flex h-full w-full max-w-md flex-col overflow-y-auto border-l bg-[color:var(--app-surface-light)] p-6 text-slate-900 shadow-xl"
       >
         <div className="flex items-start justify-between gap-4">
           <h2 id="demo-line-detail-heading" className="text-base font-semibold text-slate-900">
@@ -56,7 +56,7 @@ export function LineDetailDrawer({ line, decision, onDecide, onClose }: LineDeta
             type="button"
             onClick={onClose}
             aria-label="Close line detail"
-            className="shrink-0 rounded p-1 text-slate-500 hover:bg-slate-100"
+            className="shrink-0 rounded p-1 text-slate-500 hover:bg-[color:var(--app-surface-light-strong)]"
           >
             <X className="h-4 w-4" />
           </button>
@@ -99,7 +99,7 @@ export function LineDetailDrawer({ line, decision, onDecide, onClose }: LineDeta
           </div>
         </dl>
 
-        <div className="mt-6 border-t border-slate-200 pt-4">
+        <div className="mt-6 border-t pt-4">
           <h3 className="mb-2 text-sm font-medium text-slate-900">Record a decision</h3>
           <DemoDecisionControl lineId={line.public_id} decision={decision} onDecide={onDecide} />
         </div>

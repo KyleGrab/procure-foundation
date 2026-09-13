@@ -41,11 +41,11 @@ export default function NegotiationPage() {
         Set target prices per line on the Analysis screen, then generate a negotiation brief
         summarising priorities and talking points from verified figures only.
       </p>
-      <button onClick={generateBrief} disabled={loading} className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-40">
+      <button onClick={generateBrief} disabled={loading} className="rounded bg-indigo-500 px-4 py-2 text-white hover:bg-indigo-600 disabled:opacity-40">
         {loading ? "Generating..." : "Generate Negotiation Brief"}
       </button>
-      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
-      {brief && <pre className="mt-6 whitespace-pre-wrap rounded border border-slate-200 bg-slate-50 p-4 text-sm">{brief}</pre>}
+      {error && <p className="mt-4 text-sm text-rose-600">{error}</p>}
+      {brief && <pre className="mt-6 whitespace-pre-wrap rounded border bg-[color:var(--app-surface-light-strong)] p-4 text-sm">{brief}</pre>}
     </main>
   );
 }

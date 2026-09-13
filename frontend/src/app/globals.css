@@ -16,4 +16,20 @@
   --app-surface: #131625;
   --app-border: #1f2438;
   --app-accent: #6366f1;
+
+  /**
+   * PROCUREIQ-BLUE-SURFACE-R1: the light half of the same theme, for content that needs to stay
+   * light-on-dark-text for legibility (dense procurement tables/forms - Price Reviews) rather
+   * than the dark bg-[#0B0D17]/text-slate-100 half used everywhere else. Every value is a subtle
+   * indigo tint of white/near-white, not a second, unrelated palette - chosen so financial tables
+   * stay exactly as scannable as plain white (contrast against dark text is effectively
+   * unchanged) while still visibly reading as part of this app's blue theme rather than a plain
+   * white insert dropped onto it. Consumed by components/ui/LightSurface.tsx and, via
+   * tailwind.config.ts's borderColor.DEFAULT, by every bare `border`/`border-t`/`border-b`/etc.
+   * utility in the Price Review subtree (confirmed by grep to be the ONLY place in this codebase
+   * that relies on Tailwind's default border color, so this has zero effect anywhere else).
+   */
+  --app-surface-light: #f4f5fc;
+  --app-surface-light-strong: #eceefa;
+  --app-border-light: #dde1f5;
 }

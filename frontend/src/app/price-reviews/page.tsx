@@ -27,7 +27,7 @@ export default function PriceReviewsPage() {
         <h1 className="text-xl font-semibold">Supplier Price Reviews</h1>
         <div className="flex items-center gap-3">
           <DemoWalkthroughEntry />
-          <Link href="/price-reviews/new" className="rounded bg-slate-900 px-4 py-2 text-white">
+          <Link href="/price-reviews/new" className="rounded bg-indigo-500 px-4 py-2 text-white hover:bg-indigo-600">
             New Price Review
           </Link>
         </div>

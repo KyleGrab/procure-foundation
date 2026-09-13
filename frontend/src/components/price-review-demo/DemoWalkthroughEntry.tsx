@@ -30,7 +30,7 @@ export function DemoWalkthroughEntry({
   return (
     <Link
       href="/price-reviews/demo"
-      className="rounded border border-dashed border-slate-400 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+      className="rounded border border-dashed px-4 py-2 text-sm text-slate-700 hover:bg-[color:var(--app-surface-light-strong)]"
     >
       Open illustrative walkthrough
     </Link>

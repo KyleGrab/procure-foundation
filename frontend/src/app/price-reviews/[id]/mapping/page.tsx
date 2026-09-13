@@ -75,11 +75,11 @@ export default function MappingPage() {
         </div>
       )}
 
-      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+      {error && <p className="mt-4 text-sm text-rose-600">{error}</p>}
       <button
         onClick={confirmAndContinue}
         disabled={!previousResult || !newResult}
-        className="mt-8 rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-40"
+        className="mt-8 rounded bg-indigo-500 px-4 py-2 text-white hover:bg-indigo-600 disabled:opacity-40"
       >
         Confirm Mapping &amp; Continue
       </button>
