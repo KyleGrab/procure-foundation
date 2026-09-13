@@ -22,7 +22,7 @@ class ContractCreate(BaseModel):
     currency: Currency = Currency.ZAR
     escalation_type: str = Field(default="none", pattern="^(none|fixed_percentage|cpi_linked|tiered|negotiated)$")
     escalation_rate_pct: Decimal | None = Field(
-        default=None, ge=Decimal("-1"), le=Decimal("1"),
+        default=None, ge=Decimal(-1), le=Decimal(1),
         description="Stored as a fraction (0.05 = 5%). Bounded to [-1, 1]: a de-escalation clause "
         "can't reduce price below zero (-1 = -100%), and a single-step increase beyond 100% is "
         "almost certainly a data-entry error, not a real clause.",
@@ -32,7 +32,7 @@ class ContractCreate(BaseModel):
     minimum_spend_commitment: Decimal | None = None
 
     @model_validator(mode="after")
-    def _validate_dates_and_renewal(self) -> "ContractCreate":
+    def _validate_dates_and_renewal(self) -> ContractCreate:
         if self.expiry_date <= self.start_date:
             raise ValueError("expiry_date must be after start_date")
         if self.auto_renew and not self.renewal_term_months:

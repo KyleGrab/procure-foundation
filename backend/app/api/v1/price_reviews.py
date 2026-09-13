@@ -17,7 +17,13 @@ from app.core.constants import Permission
 from app.core.exceptions import NotFoundError, ValidationFailedError
 from app.core.permissions import require_permission
 from app.core.security import AccessTokenClaims
-from app.db.models import PriceReview, PriceReviewFile, PriceReviewLine, PriceReviewMappingTemplate, Supplier
+from app.db.models import (
+    PriceReview,
+    PriceReviewFile,
+    PriceReviewLine,
+    PriceReviewMappingTemplate,
+    Supplier,
+)
 from app.db.session import get_db
 from app.ingestion.csv_reader import read_csv_rows
 from app.ingestion.excel_reader import read_xlsx_rows
@@ -25,7 +31,6 @@ from app.ingestion.mapping import apply_mapping, suggest_mapping
 from app.ingestion.validation import summarize_issues, validate_rows
 from app.integrations.object_storage import get_storage
 from app.reporting.price_review_excel_export import ExportLine, ExportSummary, export_price_review
-from app.services import audit_service
 from app.schemas.price_review import (
     BuyerDecisionUpdate,
     ColumnMappingConfirm,
@@ -38,7 +43,7 @@ from app.schemas.price_review import (
     PriceReviewRead,
     SupplierSummaryRead,
 )
-from app.services import price_review_service
+from app.services import audit_service, price_review_service
 
 router = APIRouter(prefix="/price-reviews", tags=["price-reviews"])
 
@@ -377,7 +382,10 @@ async def generate_negotiation_brief(
     """
     from app.ai.llm_provider import get_llm_provider
     from app.db.models import Supplier
-    from app.services.negotiation_brief_service import build_negotiation_brief_context, generate_brief
+    from app.services.negotiation_brief_service import (
+        build_negotiation_brief_context,
+        generate_brief,
+    )
 
     review = await _get_review(db, review_public_id)
     supplier_result = await db.execute(select(Supplier).where(Supplier.id == review.supplier_id))

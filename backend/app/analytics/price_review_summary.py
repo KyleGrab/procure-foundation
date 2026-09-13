@@ -45,8 +45,8 @@ def weighted_average_increase(lines: list[PriceReviewLineForSummary]) -> Decimal
     zero weight AND zero impact, that would understate the number; it's simply excluded, and the
     UI must show how many lines were excluded via products_requiring_manual_review /
     low-confidence counts elsewhere)."""
-    numerator = Decimal("0")
-    denominator = Decimal("0")
+    numerator = Decimal(0)
+    denominator = Decimal(0)
     for line in lines:
         if line.percentage_change is None or line.annual_quantity is None:
             continue
@@ -72,7 +72,7 @@ def summarize(
     review_required = [l for l in lines if l.requires_review]
 
     annual_cost_impact = sum(
-        (l.annual_impact for l in lines if l.annual_impact is not None), Decimal("0")
+        (l.annual_impact for l in lines if l.annual_impact is not None), Decimal(0)
     )
 
     return SupplierSummary(

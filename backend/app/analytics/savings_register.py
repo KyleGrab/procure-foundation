@@ -118,7 +118,7 @@ def calculate_savings_waterfall(
     total, its current one, not to every stage it has already passed through.
     """
     stages = ("identified", "validated", "approved", "implementation", "realised")
-    totals = {stage: Decimal("0") for stage in stages}
+    totals = {stage: Decimal(0) for stage in stages}
     for status, amount, _is_one_time in opportunities:
         if status in totals:
             totals[status] += amount

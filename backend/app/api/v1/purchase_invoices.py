@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import Permission
 from app.core.permissions import require_permission
@@ -9,7 +10,6 @@ from app.core.security import AccessTokenClaims
 from app.db.session import get_db
 from app.schemas.purchase_invoice import PurchaseInvoiceIngest
 from app.services import purchase_ledger_service
-from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/purchase-invoices", tags=["purchase-invoices"])
 

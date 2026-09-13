@@ -46,17 +46,21 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine  # noqa: E402
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
-from app.analytics.management_accounting import (  # noqa: E402
+from app.analytics.management_accounting import (
     calculate_customer_net_margin,
     calculate_variance_vs_prior,
     calculate_working_capital_metrics,
     classify_aging_buckets,
     resolve_trade_spend_for_period,
 )
-from app.core.security import hash_password  # noqa: E402
-from app.db.models import (  # noqa: E402
+from app.core.security import hash_password
+from app.db.models import (
     AgingLedgerSnapshot,
     CostAllocationRule,
     CostToServeLedger,
@@ -130,19 +134,19 @@ async def seed_management_accounting_demo(db: AsyncSession) -> dict:
         {
             "invoice_id": "DEMO-INV-002", "customer_id": "DEMO-CUST-B",
             "allocation_level": "activity_rate", "source": "illustrative",
-            "revenue": Decimal("20000"), "cogs": Decimal("13000"),
-            "direct_logistics_cost": Decimal("1200"), "warehouse_abc_cost": Decimal("600"),
+            "revenue": Decimal(20000), "cogs": Decimal(13000),
+            "direct_logistics_cost": Decimal(1200), "warehouse_abc_cost": Decimal(600),
         },
         {
             "invoice_id": "DEMO-INV-003", "customer_id": "DEMO-CUST-C",
             "allocation_level": "direct", "source": "illustrative",
-            "revenue": Decimal("5000"), "cogs": Decimal("3200"),
-            "direct_logistics_cost": Decimal("400"), "warehouse_abc_cost": Decimal("150"),
+            "revenue": Decimal(5000), "cogs": Decimal(3200),
+            "direct_logistics_cost": Decimal(400), "warehouse_abc_cost": Decimal(150),
         },
     ]
     ledger_totals = {
-        "revenue": Decimal("0"), "cogs": Decimal("0"), "logistics": Decimal("0"),
-        "warehouse": Decimal("0"), "net_margin": Decimal("0"),
+        "revenue": Decimal(0), "cogs": Decimal(0), "logistics": Decimal(0),
+        "warehouse": Decimal(0), "net_margin": Decimal(0),
     }
     for row in ledger_rows_input:
         # Chaos Audit Domain 1: goes through resolve_trade_spend_for_period() explicitly, not a
@@ -164,7 +168,7 @@ async def seed_management_accounting_demo(db: AsyncSession) -> dict:
             organisation_id=organisation.id, invoice_id=row["invoice_id"], customer_id=row["customer_id"],
             net_revenue=row["revenue"], cogs=row["cogs"],
             direct_logistics_cost=row["direct_logistics_cost"], allocated_warehouse_cost=row["warehouse_abc_cost"],
-            allocated_overhead_cost=Decimal("0"),
+            allocated_overhead_cost=Decimal(0),
             net_margin=margin_result["net_margin"], net_margin_pct=margin_result["net_margin_pct"],
             allocation_level=row["allocation_level"], uploaded_by_user_id=user.id,
         ))
@@ -211,9 +215,9 @@ async def seed_management_accounting_demo(db: AsyncSession) -> dict:
     # period-end totals) - deliberately NOT summed to equal the real AR/AP totals above, so these
     # never look like a real breakdown of the actual receivables/payables book.
     debtors_invoices = [
-        {"amount": Decimal("200000"), "days_overdue": 10}, {"amount": Decimal("150000"), "days_overdue": 35},
-        {"amount": Decimal("100000"), "days_overdue": 65}, {"amount": Decimal("50000"), "days_overdue": 95},
-        {"amount": Decimal("25000"), "days_overdue": 130},
+        {"amount": Decimal(200000), "days_overdue": 10}, {"amount": Decimal(150000), "days_overdue": 35},
+        {"amount": Decimal(100000), "days_overdue": 65}, {"amount": Decimal(50000), "days_overdue": 95},
+        {"amount": Decimal(25000), "days_overdue": 130},
     ]
     debtors_buckets = classify_aging_buckets(debtors_invoices)
     db.add(AgingLedgerSnapshot(
@@ -224,8 +228,8 @@ async def seed_management_accounting_demo(db: AsyncSession) -> dict:
     ))
 
     creditors_invoices = [
-        {"amount": Decimal("180000"), "days_overdue": 5}, {"amount": Decimal("80000"), "days_overdue": 40},
-        {"amount": Decimal("40000"), "days_overdue": 70},
+        {"amount": Decimal(180000), "days_overdue": 5}, {"amount": Decimal(80000), "days_overdue": 40},
+        {"amount": Decimal(40000), "days_overdue": 70},
     ]
     creditors_buckets = classify_aging_buckets(creditors_invoices)
     db.add(AgingLedgerSnapshot(
