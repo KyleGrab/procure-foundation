@@ -2,6 +2,8 @@
 in services/contract_service.py per docs/architecture.md's rule."""
 from __future__ import annotations
 
+from datetime import date
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,7 +13,7 @@ from app.core.exceptions import NotFoundError
 from app.core.permissions import require_permission
 from app.core.security import AccessTokenClaims
 from app.db.models import Contract, ContractExtraction, Supplier
-from app.db.session import get_db
+from app.db.session import get_db, get_organisation_business_date
 from app.schemas.contract import (
     ContractCreate,
     ContractExtractionVerify,
@@ -50,9 +52,11 @@ async def create_contract(
     payload: ContractCreate,
     claims: AccessTokenClaims = Depends(require_permission(Permission.EDIT_SUPPLIERS)),
     db: AsyncSession = Depends(get_db),
+    as_of_date: date = Depends(get_organisation_business_date),
 ) -> ContractRead:
     contract = await contract_service.create_contract(
-        db, organisation_id=claims.active_org_id, user_id=claims.user_id, payload=payload
+        db, organisation_id=claims.active_org_id, user_id=claims.user_id, payload=payload,
+        as_of_date=as_of_date,
     )
     return _to_read_model(contract, payload.supplier_public_id)
 
@@ -62,6 +66,7 @@ async def list_contracts(
     status: str | None = None,
     claims: AccessTokenClaims = Depends(require_permission(Permission.VIEW_CONTRACTS)),
     db: AsyncSession = Depends(get_db),
+    as_of_date: date = Depends(get_organisation_business_date),
 ) -> list[ContractRead]:
     """?status=expiring_soon etc. - status is always recomputed before being returned (ADR-010),
     never trusted as-stored, even though the stored value is what the filter itself queries on
@@ -73,7 +78,7 @@ async def list_contracts(
     result = await db.execute(query)
     read_models = []
     for contract, supplier_public_id in result.all():
-        contract_service.refresh_status(contract)
+        contract_service.refresh_status(contract, as_of_date=as_of_date)
         read_models.append(_to_read_model(contract, supplier_public_id))
     return read_models
 
@@ -83,10 +88,11 @@ async def get_contract(
     contract_public_id: str,
     claims: AccessTokenClaims = Depends(require_permission(Permission.VIEW_CONTRACTS)),
     db: AsyncSession = Depends(get_db),
+    as_of_date: date = Depends(get_organisation_business_date),
 ) -> ContractRead:
     contract = await _get_contract(db, contract_public_id)
     supplier_result = await db.execute(select(Supplier.public_id).where(Supplier.id == contract.supplier_id))
-    contract_service.refresh_status(contract)
+    contract_service.refresh_status(contract, as_of_date=as_of_date)
     return _to_read_model(contract, supplier_result.scalar_one())
 
 
@@ -110,12 +116,13 @@ async def check_contract_alerts(
     contract_public_id: str,
     claims: AccessTokenClaims = Depends(require_permission(Permission.VIEW_CONTRACTS)),
     db: AsyncSession = Depends(get_db),
+    as_of_date: date = Depends(get_organisation_business_date),
 ) -> dict:
     """Manual trigger in this delivery - a scheduled daily job (Phase 9) is what should call this
     in production, not a user clicking a button. See app.services.contract_service.run_alert_check."""
     contract = await _get_contract(db, contract_public_id)
     new_alerts = await contract_service.run_alert_check(
-        db, organisation_id=claims.active_org_id, contract=contract
+        db, organisation_id=claims.active_org_id, contract=contract, as_of_date=as_of_date,
     )
     return {"new_alerts": [a.alert_type for a in new_alerts]}
 
@@ -125,6 +132,7 @@ async def verify_contract_extraction(
     contract_public_id: str, extraction_id: int, payload: ContractExtractionVerify,
     claims: AccessTokenClaims = Depends(require_permission(Permission.VIEW_CONTRACTS)),
     db: AsyncSession = Depends(get_db),
+    as_of_date: date = Depends(get_organisation_business_date),
 ) -> ContractRead:
     contract = await _get_contract(db, contract_public_id)
     extraction_result = await db.execute(
@@ -137,6 +145,7 @@ async def verify_contract_extraction(
     updated = await contract_service.promote_extraction_fields(
         db, organisation_id=claims.active_org_id, user_id=claims.user_id,
         extraction=extraction, contract=contract, field_names=payload.field_names_to_promote,
+        as_of_date=as_of_date,
     )
     supplier_result = await db.execute(select(Supplier.public_id).where(Supplier.id == updated.supplier_id))
     return _to_read_model(updated, supplier_result.scalar_one())

@@ -38,16 +38,19 @@ boundaries.
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
+from datetime import date
 
 from fastapi import Depends, Header
-from sqlalchemy import event, text
+from sqlalchemy import event, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import Session
 
+from app.core.business_calendar import resolve_business_date
 from app.core.config import get_settings
 from app.core.exceptions import AuthenticationError, DatabaseUnavailableError
 from app.core.security import AccessTokenClaims, decode_access_token
+from app.db.models import Organisation
 
 _settings = get_settings()
 # ADR-011: the application connects as procureiq_app (least-privilege, RLS-forced), never as the
@@ -125,3 +128,22 @@ async def get_db_unauthenticated() -> AsyncGenerator[AsyncSession, None]:
         yield session
     finally:
         await session.close()
+
+
+async def get_organisation_business_date(
+    claims: AccessTokenClaims = Depends(get_current_claims),
+    db: AsyncSession = Depends(get_db),
+) -> date:
+    """
+    BUSINESS-DATE-SEMANTICS-IMPLEMENTATION-R1: the authenticated-organisation boundary where
+    "today" is allowed to enter this application (design phase rule #3) - reads the requesting
+    user's own authenticated organisation's configured timezone (never server-local, never a
+    client-supplied value or header) and resolves the current business-calendar date from it via
+    app.core.business_calendar.resolve_business_date. organisation_id comes from the validated
+    JWT claim exactly as get_db already trusts it for RLS, not from anything else request-shaped.
+    Organisation is not itself tenant-scoped (see its own model docstring), so this plain lookup
+    by the authenticated org's own id needs no RLS policy to be correctly authorised.
+    """
+    result = await db.execute(select(Organisation.timezone).where(Organisation.id == claims.active_org_id))
+    timezone_name = result.scalar_one()
+    return resolve_business_date(timezone_name)

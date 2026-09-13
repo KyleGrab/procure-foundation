@@ -95,17 +95,19 @@ async def build_procurement_lens(db: AsyncSession, *, organisation_id: int) -> C
 
 
 async def build_inventory_lens(
-    db: AsyncSession, *, organisation_id: int, as_of: date | None = None, stale_threshold_days: int = 60,
+    db: AsyncSession, *, organisation_id: int, as_of_date: date, stale_threshold_days: int = 60,
 ) -> CanvasGraph:
     """
-    as_of defaults to today, resolved here in the service layer (not inside the pure engine -
-    same §7.3 determinism boundary as every other pure function this session). Fetches full
-    snapshot history per grain key rather than a windowed "latest per group" SQL query - simpler
-    for this v1, acceptable at realistic data volumes; a real performance concern later is a
-    query optimization, not a logic rewrite (same documented tradeoff as
-    duplicate_detection_service's O(n^2) scan).
+    as_of_date is always the caller's own resolved organisation business date
+    (app.db.session.get_organisation_business_date) - this function no longer reads a real clock
+    itself (BUSINESS-DATE-SEMANTICS-IMPLEMENTATION-R1), same §7.3 determinism boundary as every
+    other pure function this session, just applied one layer further out. Fetches full snapshot
+    history per grain key rather than a windowed "latest per group" SQL query - simpler for this
+    v1, acceptable at realistic data volumes; a real performance concern later is a query
+    optimization, not a logic rewrite (same documented tradeoff as duplicate_detection_service's
+    O(n^2) scan).
     """
-    resolved_as_of = as_of or date.today()
+    resolved_as_of = as_of_date
 
     locations_result = await db.execute(
         select(Location).where(Location.organisation_id == organisation_id)

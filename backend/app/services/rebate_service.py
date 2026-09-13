@@ -213,18 +213,20 @@ async def record_period_actual(
 
 async def check_threshold_alert(
     db: AsyncSession, *, organisation_id: int,
-    agreement: RebateAgreement, period_actual: RebatePeriodActual, today: date | None = None,
+    agreement: RebateAgreement, period_actual: RebatePeriodActual, as_of_date: date,
 ) -> RebateAlert | None:
     """Idempotent, same pattern as contract_service.run_alert_check - the unique constraint on
     (rebate_period_actual_id, alert_type) is what actually enforces one-time firing; this
-    function just avoids inserting a row it already knows would violate it."""
+    function just avoids inserting a row it already knows would violate it.
+
+    BUSINESS-DATE-SEMANTICS-IMPLEMENTATION-R1: as_of_date is always the caller's own resolved
+    organisation business date - this function no longer reads a real clock itself."""
     bands = _bands_from_agreement(agreement)
     if bands is None or period_actual.actual_spend is None:
         return None
-    today = today or date.today()
 
     due = is_threshold_alert_due(
-        Decimal(str(period_actual.actual_spend)), bands, today, period_actual.period_end
+        Decimal(str(period_actual.actual_spend)), bands, as_of_date, period_actual.period_end
     )
     if not due:
         return None
@@ -239,7 +241,7 @@ async def check_threshold_alert(
 
     alert = RebateAlert(
         organisation_id=organisation_id, rebate_period_actual_id=period_actual.id,
-        alert_type="threshold_approaching", trigger_date=today,
+        alert_type="threshold_approaching", trigger_date=as_of_date,
     )
     db.add(alert)
     await audit_service.record(
@@ -285,7 +287,7 @@ async def close_period(
 
 async def record_receipt(
     db: AsyncSession, *, organisation_id: int, user_id: int,
-    period_actual: RebatePeriodActual, payload: RebateReceiptRecord,
+    period_actual: RebatePeriodActual, payload: RebateReceiptRecord, as_of_date: date,
 ) -> dict:
     """spec Section 29 + analytics-methodology.md §8: received_amount is only ever set from an
     actual reference, and setting it is what makes leakage detection (or reconciliation)
@@ -297,10 +299,15 @@ async def record_receipt(
     'legacy_unverified' - never a fabricated leakage figure computed against an assumed-zero
     expectation. Return type changed from RebatePeriodActual to dict - the diagnostic leakage
     shape needs to be communicated to the caller, not silently absent from the response.
+
+    BUSINESS-DATE-SEMANTICS-IMPLEMENTATION-R1: as_of_date (the caller's own resolved organisation
+    business date) feeds only the derived _refresh_status calculation below - the receipt's own
+    persisted fields (received_amount/received_reference) and its event/effective-date semantics
+    are untouched by this phase, exactly as scoped.
     """
     period_actual.received_amount = payload.received_amount
     period_actual.received_reference = payload.received_reference
-    _refresh_status(period_actual, today=date.today(), period_closed=period_actual.earned_amount is not None)
+    _refresh_status(period_actual, today=as_of_date, period_closed=period_actual.earned_amount is not None)
 
     if period_actual.expected_amount_status in ("unknown", "legacy_unverified"):
         leakage_result = {"leakage": None, "status": "diagnostic", "reason_code": "expected_amount_status_insufficient"}

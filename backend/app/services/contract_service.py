@@ -7,7 +7,7 @@ DB-dependent, syntax-checked only in this sandbox.
 """
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -28,7 +28,7 @@ from app.services import audit_service
 
 
 async def create_contract(
-    db: AsyncSession, *, organisation_id: int, user_id: int, payload: ContractCreate
+    db: AsyncSession, *, organisation_id: int, user_id: int, payload: ContractCreate, as_of_date: date
 ) -> Contract:
     supplier_result = await db.execute(
         select(Supplier).where(Supplier.public_id == payload.supplier_public_id)
@@ -56,7 +56,7 @@ async def create_contract(
         minimum_spend_commitment=payload.minimum_spend_commitment,
         created_by_user_id=user_id,
     )
-    refresh_status(contract)
+    refresh_status(contract, as_of_date=as_of_date)
     db.add(contract)
     await db.flush()
 
@@ -69,16 +69,18 @@ async def create_contract(
     return contract
 
 
-def refresh_status(contract: Contract, *, today=None) -> None:
+def refresh_status(contract: Contract, *, as_of_date: date) -> None:
     """See ADR-010: recomputes status from dates rather than trusting whatever's stored. Called
     on every write and should also be called by a scheduled daily job (Phase 9, not built here)
-    so status doesn't go stale purely from time passing with no user action."""
-    from datetime import date as date_cls
+    so status doesn't go stale purely from time passing with no user action.
 
-    today = today or date_cls.today()
+    BUSINESS-DATE-SEMANTICS-IMPLEMENTATION-R1: as_of_date is always the caller's own resolved
+    organisation business date (app.db.session.get_organisation_business_date) - this function no
+    longer reads a real clock itself, matching the same determinism-boundary rule already applied
+    to every pure calculation in app.analytics (§2.1)."""
     deadline = calculate_notice_deadline(contract.expiry_date, contract.notice_period_days)
     status = classify_contract_status(
-        today, contract.expiry_date, deadline, auto_renew=contract.auto_renew
+        as_of_date, contract.expiry_date, deadline, auto_renew=contract.auto_renew
     )
     contract.status = status.value
     contract.status_calculated_at = datetime.now(UTC)
@@ -122,13 +124,16 @@ async def calculate_escalated_price_for_contract(
     )
 
 
-async def run_alert_check(db: AsyncSession, *, organisation_id: int, contract: Contract) -> list[ContractAlert]:
+async def run_alert_check(
+    db: AsyncSession, *, organisation_id: int, contract: Contract, as_of_date: date
+) -> list[ContractAlert]:
     """Idempotent - see contract_alerts' unique constraint and
     app.analytics.contract_calculations.determine_due_alerts. Intended to be called once per day
-    per contract by a scheduled job (Phase 9); calling it more often is safe, just redundant."""
-    from datetime import date as date_cls
+    per contract by a scheduled job (Phase 9); calling it more often is safe, just redundant.
 
-    today = date_cls.today()
+    BUSINESS-DATE-SEMANTICS-IMPLEMENTATION-R1: as_of_date is the caller's own resolved
+    organisation business date - this function no longer reads a real clock itself."""
+    today = as_of_date
     deadline = calculate_notice_deadline(contract.expiry_date, contract.notice_period_days)
 
     existing_result = await db.execute(
@@ -157,7 +162,7 @@ async def run_alert_check(db: AsyncSession, *, organisation_id: int, contract: C
 
 async def promote_extraction_fields(
     db: AsyncSession, *, organisation_id: int, user_id: int,
-    extraction: ContractExtraction, contract: Contract, field_names: list[str],
+    extraction: ContractExtraction, contract: Contract, field_names: list[str], as_of_date: date,
 ) -> Contract:
     """
     The DB-I/O half of ADR-004's promotion flow - all gating logic (verification-status check,
@@ -174,7 +179,7 @@ async def promote_extraction_fields(
     for field_name, value in promotable.items():
         setattr(contract, field_name, value)
 
-    refresh_status(contract)
+    refresh_status(contract, as_of_date=as_of_date)
     extraction.verification_status = "human_verified"
     extraction.verified_by_user_id = user_id
     extraction.verified_at = datetime.now(UTC)

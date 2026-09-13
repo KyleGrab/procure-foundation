@@ -7,6 +7,7 @@ variable), RBAC via require_permission - same pattern as every other route in th
 """
 from __future__ import annotations
 
+from datetime import date
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
@@ -16,7 +17,7 @@ from app.core.constants import Permission
 from app.core.exceptions import ValidationFailedError
 from app.core.permissions import require_permission
 from app.core.security import AccessTokenClaims
-from app.db.session import get_db
+from app.db.session import get_db, get_organisation_business_date
 from app.services import canvas_service
 
 router = APIRouter(prefix="/canvas", tags=["canvas"])
@@ -50,11 +51,14 @@ async def get_canvas_nodes(
     lens: Literal["procurement", "operations", "management"] = Query(...),
     claims: AccessTokenClaims = Depends(require_permission(Permission.VIEW_FINANCIALS)),
     db: AsyncSession = Depends(get_db),
+    as_of_date: date = Depends(get_organisation_business_date),
 ) -> dict:
     if lens == "procurement":
         graph = await canvas_service.build_procurement_lens(db, organisation_id=claims.active_org_id)
     elif lens == "operations":
-        graph = await canvas_service.build_inventory_lens(db, organisation_id=claims.active_org_id)
+        graph = await canvas_service.build_inventory_lens(
+            db, organisation_id=claims.active_org_id, as_of_date=as_of_date
+        )
     elif lens == "management":
         graph = await canvas_service.build_management_lens(db, organisation_id=claims.active_org_id)
     else:

@@ -3,6 +3,7 @@ services/rebate_service.py per docs/architecture.md's rule."""
 from __future__ import annotations
 
 import uuid
+from datetime import date
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
@@ -13,7 +14,7 @@ from app.core.exceptions import NotFoundError
 from app.core.permissions import require_permission
 from app.core.security import AccessTokenClaims
 from app.db.models import RebateAgreement, RebatePeriodActual, Supplier
-from app.db.session import get_db
+from app.db.session import get_db, get_organisation_business_date
 from app.schemas.rebate import (
     RebateAgreementCreate,
     RebateAgreementRead,
@@ -157,6 +158,7 @@ async def check_rebate_threshold_alert(
     agreement_public_id: str, period_public_id: str,
     claims: AccessTokenClaims = Depends(require_permission(Permission.VIEW_FINANCIALS)),
     db: AsyncSession = Depends(get_db),
+    as_of_date: date = Depends(get_organisation_business_date),
 ) -> dict:
     """Manual trigger in this delivery - the confirmed 'dynamic recalculation on ingestion' +
     'monthly close' design means a scheduled job (Phase 9) is what should call this and
@@ -164,7 +166,8 @@ async def check_rebate_threshold_alert(
     agreement = await _get_agreement(db, agreement_public_id)
     period_actual = await _get_period_actual(db, agreement.id, period_public_id)
     alert = await rebate_service.check_threshold_alert(
-        db, organisation_id=claims.active_org_id, agreement=agreement, period_actual=period_actual
+        db, organisation_id=claims.active_org_id, agreement=agreement, period_actual=period_actual,
+        as_of_date=as_of_date,
     )
     return {"alert_fired": alert.alert_type if alert else None}
 
@@ -188,12 +191,13 @@ async def record_rebate_receipt(
     agreement_public_id: str, period_public_id: str, payload: RebateReceiptRecord,
     claims: AccessTokenClaims = Depends(require_permission(Permission.APPROVE_SAVINGS)),
     db: AsyncSession = Depends(get_db),
+    as_of_date: date = Depends(get_organisation_business_date),
 ) -> RebateReceiptRecordResponse:
     agreement = await _get_agreement(db, agreement_public_id)
     period_actual = await _get_period_actual(db, agreement.id, period_public_id)
     result = await rebate_service.record_receipt(
         db, organisation_id=claims.active_org_id, user_id=claims.user_id,
-        period_actual=period_actual, payload=payload,
+        period_actual=period_actual, payload=payload, as_of_date=as_of_date,
     )
     period_actual_read = _to_period_actual_read_model(result["period_actual"], agreement)
     return RebateReceiptRecordResponse(period_actual=period_actual_read, leakage_result=result["leakage_result"])
