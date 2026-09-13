@@ -59,21 +59,20 @@ def _insert_org_and_supplier(app_dsn: str, org_name: str, supplier_name: str) ->
     """Module-level, not a private method on one test class - TestConcurrentSessionIsolation
     below needs the exact same logic, and duplicating it would risk the two versions drifting
     apart the way rebate_aggregation_service.py's pre-ADR-014 duplication did."""
-    with psycopg.connect(app_dsn) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "INSERT INTO organisations (public_id, name) VALUES (gen_random_uuid(), %s) RETURNING id",
-                (org_name,),
-            )
-            org_id = cur.fetchone()[0]
-            cur.execute(f"SET LOCAL app.current_org_id = '{org_id}'")
-            cur.execute(
-                "INSERT INTO suppliers (organisation_id, public_id, legal_name, currency) "
-                "VALUES (%s, gen_random_uuid(), %s, 'ZAR') RETURNING id",
-                (org_id, supplier_name),
-            )
-            supplier_id = cur.fetchone()[0]
-            conn.commit()
+    with psycopg.connect(app_dsn) as conn, conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO organisations (public_id, name) VALUES (gen_random_uuid(), %s) RETURNING id",
+            (org_name,),
+        )
+        org_id = cur.fetchone()[0]
+        cur.execute(f"SET LOCAL app.current_org_id = '{org_id}'")
+        cur.execute(
+            "INSERT INTO suppliers (organisation_id, public_id, legal_name, currency) "
+            "VALUES (%s, gen_random_uuid(), %s, 'ZAR') RETURNING id",
+            (org_id, supplier_name),
+        )
+        supplier_id = cur.fetchone()[0]
+        conn.commit()
     return org_id, supplier_id
 
 

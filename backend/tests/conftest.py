@@ -68,15 +68,14 @@ def _prepare_schema():
     settings = get_settings()
     db_name = settings.database_url_sync.rsplit("/", 1)[-1]
 
-    with psycopg.connect(_admin_maintenance_dsn(settings.database_url_sync), autocommit=True) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
-                "WHERE datname = %s AND pid <> pg_backend_pid()",
-                (db_name,),
-            )
-            cur.execute(sql.SQL("DROP DATABASE IF EXISTS {}").format(sql.Identifier(db_name)))
-            cur.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(db_name)))
+    with psycopg.connect(_admin_maintenance_dsn(settings.database_url_sync), autocommit=True) as conn, conn.cursor() as cur:
+        cur.execute(
+            "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+            "WHERE datname = %s AND pid <> pg_backend_pid()",
+            (db_name,),
+        )
+        cur.execute(sql.SQL("DROP DATABASE IF EXISTS {}").format(sql.Identifier(db_name)))
+        cur.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(db_name)))
 
     backend_root = Path(__file__).resolve().parent.parent
     subprocess.run(

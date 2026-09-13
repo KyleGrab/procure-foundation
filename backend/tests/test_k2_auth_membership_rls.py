@@ -203,60 +203,57 @@ def test_empty_string_current_org_id_on_reused_connection_is_a_safe_deny_not_a_c
     org/user/membership via the admin connection rather than depending on another test in this
     module having already run, so it passes in isolation too (pytest -k, reordering, etc.).
     """
-    with psycopg.connect(_sync_admin_dsn_as_plain_url(), autocommit=True) as admin_conn:
-        with admin_conn.cursor() as cur:
-            cur.execute(
-                "INSERT INTO organisations (public_id, name) VALUES (gen_random_uuid(), %s) RETURNING id",
-                ("K2 GUC Regression Org",),
-            )
-            seed_org_id = cur.fetchone()[0]
-            cur.execute(
-                "INSERT INTO users (public_id, first_name, last_name, email, password_hash) "
-                "VALUES (gen_random_uuid(), 'K2', 'GUC', 'k2-guc-regression@example.com', 'x') RETURNING id",
-                (),
-            )
-            seed_user_id = cur.fetchone()[0]
-            cur.execute(
-                "INSERT INTO organisation_memberships (public_id, user_id, organisation_id, role, status) "
-                "VALUES (gen_random_uuid(), %s, %s, 'owner', 'active')",
-                (seed_user_id, seed_org_id),
-            )
+    with psycopg.connect(_sync_admin_dsn_as_plain_url(), autocommit=True) as admin_conn, admin_conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO organisations (public_id, name) VALUES (gen_random_uuid(), %s) RETURNING id",
+            ("K2 GUC Regression Org",),
+        )
+        seed_org_id = cur.fetchone()[0]
+        cur.execute(
+            "INSERT INTO users (public_id, first_name, last_name, email, password_hash) "
+            "VALUES (gen_random_uuid(), 'K2', 'GUC', 'k2-guc-regression@example.com', 'x') RETURNING id",
+            (),
+        )
+        seed_user_id = cur.fetchone()[0]
+        cur.execute(
+            "INSERT INTO organisation_memberships (public_id, user_id, organisation_id, role, status) "
+            "VALUES (gen_random_uuid(), %s, %s, 'owner', 'active')",
+            (seed_user_id, seed_org_id),
+        )
 
-    with psycopg.connect(_sync_app_dsn_as_plain_url(), autocommit=True) as conn:
-        with conn.cursor() as cur:
-            # Establish, then end, a real org context on this physical connection.
-            conn.autocommit = False
-            cur.execute("SET LOCAL app.current_org_id = '1'")
-            cur.execute("SELECT current_setting('app.current_org_id', true)")
-            assert cur.fetchone()[0] == "1"
-            conn.commit()  # SET LOCAL's scope ends here
+    with psycopg.connect(_sync_app_dsn_as_plain_url(), autocommit=True) as conn, conn.cursor() as cur:
+        # Establish, then end, a real org context on this physical connection.
+        conn.autocommit = False
+        cur.execute("SET LOCAL app.current_org_id = '1'")
+        cur.execute("SELECT current_setting('app.current_org_id', true)")
+        assert cur.fetchone()[0] == "1"
+        conn.commit()  # SET LOCAL's scope ends here
 
-            # New transaction, SAME physical connection, nothing re-set - reproduces the residue.
-            cur.execute("SELECT current_setting('app.current_org_id', true)")
-            residue = cur.fetchone()[0]
-            assert residue == "", (
-                f"expected the historical '' residue this test exists to guard against, got "
-                f"{residue!r} - if Postgres's behavior here has changed, this test's premise "
-                f"needs re-checking, not the migration."
-            )
+        # New transaction, SAME physical connection, nothing re-set - reproduces the residue.
+        cur.execute("SELECT current_setting('app.current_org_id', true)")
+        residue = cur.fetchone()[0]
+        assert residue == "", (
+            f"expected the historical '' residue this test exists to guard against, got "
+            f"{residue!r} - if Postgres's behavior here has changed, this test's premise "
+            f"needs re-checking, not the migration."
+        )
 
-            # The actual regression check: querying the RLS-protected table in this exact state
-            # must not raise, and must safely return zero rows (never another tenant's data).
-            cur.execute("SELECT count(*) FROM organisation_memberships")
-            count = cur.fetchone()[0]
-            assert count == 0
-            conn.rollback()
+        # The actual regression check: querying the RLS-protected table in this exact state
+        # must not raise, and must safely return zero rows (never another tenant's data).
+        cur.execute("SELECT count(*) FROM organisation_memberships")
+        count = cur.fetchone()[0]
+        assert count == 0
+        conn.rollback()
 
-    with psycopg.connect(_sync_app_dsn_as_plain_url(), autocommit=False) as conn:
-        with conn.cursor() as cur:
-            cur.execute("SET LOCAL app.current_org_id = '999999999'")
-            conn.commit()  # leave '' residue on app.current_org_id again
+    with psycopg.connect(_sync_app_dsn_as_plain_url(), autocommit=False) as conn, conn.cursor() as cur:
+        cur.execute("SET LOCAL app.current_org_id = '999999999'")
+        conn.commit()  # leave '' residue on app.current_org_id again
 
-            # SET LOCAL takes a literal, not a bind parameter - seed_user_id is our own just-
-            # inserted integer id (RETURNING id above), never client input, same as
-            # test_rls_integration.py's identical f-string SET LOCAL pattern.
-            cur.execute(f"SET LOCAL app.current_user_id = '{seed_user_id}'")
-            cur.execute("SELECT count(*) FROM organisation_memberships WHERE user_id = %s", (seed_user_id,))
-            count = cur.fetchone()[0]
-            assert count >= 1, "self_membership_select should surface this user's own row even with '' org residue"
-            conn.rollback()
+        # SET LOCAL takes a literal, not a bind parameter - seed_user_id is our own just-
+        # inserted integer id (RETURNING id above), never client input, same as
+        # test_rls_integration.py's identical f-string SET LOCAL pattern.
+        cur.execute(f"SET LOCAL app.current_user_id = '{seed_user_id}'")
+        cur.execute("SELECT count(*) FROM organisation_memberships WHERE user_id = %s", (seed_user_id,))
+        count = cur.fetchone()[0]
+        assert count >= 1, "self_membership_select should surface this user's own row even with '' org residue"
+        conn.rollback()
