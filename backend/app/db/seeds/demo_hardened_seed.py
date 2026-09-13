@@ -55,7 +55,7 @@ async def seed_demo_hardened(db: AsyncSession) -> dict:
     organisation = org_result.scalar_one_or_none()
 
     if organisation is None:
-        seed_result = await seed_management_accounting_demo(db)
+        _ = await seed_management_accounting_demo(db)
         org_result = await db.execute(select(Organisation).where(Organisation.name == DEMO_ORG_NAME))
         organisation = org_result.scalar_one()
         demo_data_status = "created"
