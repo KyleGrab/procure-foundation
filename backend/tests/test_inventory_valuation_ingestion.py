@@ -62,10 +62,10 @@ class TestInventoryValuationPeriodLocking:
     async def test_reingesting_same_location_and_date_without_correction_raises(self, client, db_session):
         _, org_id, user_id = await _register_org(client, "iv-conflict@example.com", "IV Conflict Org")
         location_id = await _create_location(db_session, org_id, "WH1")
-        kwargs = dict(
-            organisation_id=org_id, user_id=user_id, location_id=location_id,
-            snapshot_date=date(2026, 8, 26), validated_records=_SAMPLE_RECORDS,
-        )
+        kwargs = {
+            "organisation_id": org_id, "user_id": user_id, "location_id": location_id,
+            "snapshot_date": date(2026, 8, 26), "validated_records": _SAMPLE_RECORDS,
+        }
         await ingest_inventory_valuation(db_session, **kwargs)
         with pytest.raises(ConflictError):
             await ingest_inventory_valuation(db_session, **kwargs)
@@ -73,10 +73,10 @@ class TestInventoryValuationPeriodLocking:
     async def test_correction_flag_supersedes_prior_active_rows(self, client, db_session):
         _, org_id, user_id = await _register_org(client, "iv-correction@example.com", "IV Correction Org")
         location_id = await _create_location(db_session, org_id, "WH1")
-        kwargs = dict(
-            organisation_id=org_id, user_id=user_id, location_id=location_id,
-            snapshot_date=date(2026, 8, 26), validated_records=_SAMPLE_RECORDS,
-        )
+        kwargs = {
+            "organisation_id": org_id, "user_id": user_id, "location_id": location_id,
+            "snapshot_date": date(2026, 8, 26), "validated_records": _SAMPLE_RECORDS,
+        }
         await ingest_inventory_valuation(db_session, **kwargs)
         corrected = await ingest_inventory_valuation(db_session, is_correction=True, **kwargs)
         assert corrected["record_count"] == 2

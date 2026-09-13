@@ -134,13 +134,13 @@ class TestInventoryLensGraph(unittest.TestCase):
 
 class TestManagementLensGraph(unittest.TestCase):
     def _summary(self, **overrides):
-        defaults = dict(
-            gross_revenue=Decimal(1000000), cogs=Decimal(650000),
-            warehouse_abc_cost=Decimal(40000), logistics_cost=Decimal(60000),
-            net_margin=Decimal(250000),
-            dso=Decimal("50.0"), dio=Decimal("57.1"), dpo=Decimal("42.9"), ccc=Decimal("64.2"),
-            dso_variance=Decimal("2.0"), dio_variance=Decimal("-1.5"), dpo_variance=Decimal("0.5"),
-        )
+        defaults = {
+            "gross_revenue": Decimal(1000000), "cogs": Decimal(650000),
+            "warehouse_abc_cost": Decimal(40000), "logistics_cost": Decimal(60000),
+            "net_margin": Decimal(250000),
+            "dso": Decimal("50.0"), "dio": Decimal("57.1"), "dpo": Decimal("42.9"), "ccc": Decimal("64.2"),
+            "dso_variance": Decimal("2.0"), "dio_variance": Decimal("-1.5"), "dpo_variance": Decimal("0.5"),
+        }
         defaults.update(overrides)
         return ManagementSummaryInput(**defaults)
 

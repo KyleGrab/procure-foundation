@@ -55,24 +55,24 @@ class TestWorkingCapitalPeriodLocking:
 
     async def test_reingesting_same_period_without_correction_flag_raises_conflict(self, client, db_session):
         _, org_id, user_id = await _register_org(client, "wc-conflict@example.com", "WC Conflict Org")
-        kwargs = dict(
-            organisation_id=org_id, user_id=user_id, as_of_date=date(2026, 8, 31),
-            accounts_receivable=Decimal(100000), accounts_payable=Decimal(50000),
-            inventory_value=Decimal(30000), cash_balance=Decimal(10000),
-            annualized_revenue=Decimal(1000000), annualized_cogs=Decimal(700000),
-        )
+        kwargs = {
+            "organisation_id": org_id, "user_id": user_id, "as_of_date": date(2026, 8, 31),
+            "accounts_receivable": Decimal(100000), "accounts_payable": Decimal(50000),
+            "inventory_value": Decimal(30000), "cash_balance": Decimal(10000),
+            "annualized_revenue": Decimal(1000000), "annualized_cogs": Decimal(700000),
+        }
         await ingest_working_capital_snapshot(db_session, **kwargs)
         with pytest.raises(ConflictError):
             await ingest_working_capital_snapshot(db_session, **kwargs)
 
     async def test_correction_flag_creates_new_row_referencing_the_prior_one(self, client, db_session):
         _, org_id, user_id = await _register_org(client, "wc-correction@example.com", "WC Correction Org")
-        kwargs = dict(
-            organisation_id=org_id, user_id=user_id, as_of_date=date(2026, 8, 31),
-            accounts_receivable=Decimal(100000), accounts_payable=Decimal(50000),
-            inventory_value=Decimal(30000), cash_balance=Decimal(10000),
-            annualized_revenue=Decimal(1000000), annualized_cogs=Decimal(700000),
-        )
+        kwargs = {
+            "organisation_id": org_id, "user_id": user_id, "as_of_date": date(2026, 8, 31),
+            "accounts_receivable": Decimal(100000), "accounts_payable": Decimal(50000),
+            "inventory_value": Decimal(30000), "cash_balance": Decimal(10000),
+            "annualized_revenue": Decimal(1000000), "annualized_cogs": Decimal(700000),
+        }
         original = await ingest_working_capital_snapshot(db_session, **kwargs)
         corrected_kwargs = {**kwargs, "accounts_receivable": Decimal(105000)}
         corrected = await ingest_working_capital_snapshot(db_session, is_correction=True, **corrected_kwargs)
@@ -99,10 +99,10 @@ class TestAgingPeriodLocking:
 
     async def test_reingesting_same_ledger_type_and_date_without_correction_raises(self, client, db_session):
         _, org_id, user_id = await _register_org(client, "aging-conflict@example.com", "Aging Conflict Org")
-        kwargs = dict(
-            organisation_id=org_id, user_id=user_id, as_of_date=date(2026, 8, 31),
-            ledger_type="debtors", invoices=[{"amount": Decimal(1000), "days_overdue": 10}],
-        )
+        kwargs = {
+            "organisation_id": org_id, "user_id": user_id, "as_of_date": date(2026, 8, 31),
+            "ledger_type": "debtors", "invoices": [{"amount": Decimal(1000), "days_overdue": 10}],
+        }
         await ingest_aging_snapshot(db_session, **kwargs)
         with pytest.raises(ConflictError):
             await ingest_aging_snapshot(db_session, **kwargs)

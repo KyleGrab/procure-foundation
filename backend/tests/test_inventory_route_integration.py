@@ -84,10 +84,10 @@ async def test_malformed_row_returns_422_with_diagnostic_details_array(client, d
 async def test_reupload_same_location_and_date_without_correction_returns_409(client, db_session):
     token, org_id, _ = await _register_org(client, "iv-route-conflict@example.com", "IV Route Conflict Org")
     location_public_id = await _create_location(db_session, org_id, "WH3")
-    payload = dict(
-        data={"location_id": location_public_id, "snapshot_date": "2026-08-26"},
-        headers={"Authorization": f"Bearer {token}"},
-    )
+    payload = {
+        "data": {"location_id": location_public_id, "snapshot_date": "2026-08-26"},
+        "headers": {"Authorization": f"Bearer {token}"},
+    }
     first = await client.post(
         "/inventory/upload-valuation", files={"file": ("v.csv", io.BytesIO(_SAMPLE_CSV.encode()), "text/csv")}, **payload,
     )
