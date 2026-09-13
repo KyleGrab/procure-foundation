@@ -170,15 +170,21 @@ async def test_response_preserves_stored_financial_actuals_through_receipt(clien
 @pytest.mark.integration
 async def test_closed_period_response_includes_complete_tier_fields(client):
     """Proof F (close path): a period whose end date has already passed can be closed, and the
-    response still carries the full, correct tier-progress contract - not just create/get."""
+    response still carries the full, correct tier-progress contract - not just create/get.
+
+    BACKEND-RUFF-RESIDUAL-MECHANICAL-R1: period_end is a fixed, named reference date - not
+    date.today() - since all this test needs is "safely in the past relative to whenever this
+    suite actually runs" (never that it be the real calendar day before the run), and a literal
+    reference date makes that requirement explicit rather than incidentally true of a relative
+    "yesterday" that would otherwise still call the wall clock for no behavioural reason."""
     token, supplier_public_id = await _register_org_and_supplier(
         client, "close-period@example.com", "Close Period Org", "Close Period Supplier"
     )
     agreement_public_id = await _create_tiered_agreement(client, token, supplier_public_id)
-    yesterday = date.today() - timedelta(days=1)
+    fixed_reference_period_end = date(2020, 6, 30)
     period = await _record_period(
         client, token, agreement_public_id, "800",
-        yesterday - timedelta(days=90), yesterday,
+        fixed_reference_period_end - timedelta(days=90), fixed_reference_period_end,
     )
     close_resp = await client.post(
         f"/rebates/{agreement_public_id}/periods/{period['public_id']}/close",
