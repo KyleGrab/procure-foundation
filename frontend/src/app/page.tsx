@@ -3,6 +3,10 @@
  * light-mode stub (text-slate-600, bg-slate-900 plain buttons) - the first thing anyone saw,
  * immediately followed by the polished dark /welcome gateway post-login. Caught while auditing
  * the frontend for polish gaps, not assumed fine because it compiled.
+ *
+ * PROCUREIQ-APP-BACKGROUND-R1: no longer paints its own bg-[#0B0D17] + radial-gradient div - that
+ * was one of the two places this exact background was duplicated (HomeGateway.tsx being the
+ * other); both now get it for free from the shared app/layout.tsx + AppBackground.tsx instead.
  */
 import Link from "next/link";
 import { shouldShowRegistrationLink } from "@/lib/registration-guard";
@@ -10,12 +14,7 @@ import { shouldShowRegistrationLink } from "@/lib/registration-guard";
 export default function HomePage() {
   const showRegistration = shouldShowRegistrationLink(process.env.NEXT_PUBLIC_ALLOW_SELF_REGISTRATION);
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#0B0D17] px-6">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0"
-        style={{ background: "radial-gradient(600px circle at 50% 30%, rgba(99,102,241,0.10), transparent 60%)" }}
-      />
+    <main className="relative flex min-h-screen flex-col items-center justify-center px-6">
       <div className="relative z-10 text-center">
         <h1 className="text-3xl font-semibold text-slate-100">ProcureIQ</h1>
         <p className="mt-2 text-sm text-slate-400">Procurement intelligence and margin protection.</p>

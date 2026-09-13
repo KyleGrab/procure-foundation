@@ -62,15 +62,15 @@ export default function LoginPage() {
   }
 
   return (
-    // Pre-existing, unrelated to this feature: the shared root layout sets a light body
-    // (app/layout.tsx's bg-slate-50), but every element on this page (text-white heading,
-    // bg-[#131625] inputs, the dark demo/dev-only boxes below) was styled for a dark one -
-    // white-on-near-white is close to unreadable. Scoped fix here only (this page's own <main>),
-    // not a change to the shared layout other, genuinely light-themed pages (/, /price-reviews,
-    // /register) depend on - /login is the one page on this feature's required entry journey, so
-    // it's the one page fixed; /register has the identical pre-existing issue and is left alone
-    // as out of scope.
-    <main className="min-h-screen bg-[#0B0D17] px-6 py-24">
+    // PROCUREIQ-APP-BACKGROUND-R1: no longer paints its own flat bg-[#0B0D17] here - the shared
+    // root layout (app/layout.tsx) is dark by default now, with the same indigo glow /welcome
+    // already had, so this page picks that up automatically and, for the first time, actually
+    // matches the gateway it leads into rather than a flatter stand-in for it. register/page.tsx
+    // got the equivalent dark-card treatment (border-[#1F2438]/bg-[#131625] inputs, text-white
+    // heading) as a direct consequence of this same change - the root body's text color is no
+    // longer implicitly dark, so its previously-unstyled heading needed the explicit color this
+    // page's own heading already had.
+    <main className="min-h-screen px-6 py-24">
       <div className="mx-auto max-w-sm">
         <h1 className="mb-6 text-xl font-semibold text-white">Log in</h1>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">

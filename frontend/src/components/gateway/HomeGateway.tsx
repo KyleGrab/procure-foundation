@@ -15,6 +15,11 @@
  * being added now just because a real image exists to put it on; a static, well-composed
  * placement is the honest scope of what this turn asked for ("wire in the actual assets"), not
  * license to add motion behavior nobody requested.
+ *
+ * PROCUREIQ-APP-BACKGROUND-R1: no longer paints its own bg-[#0B0D17] + radial-gradient div - that
+ * was one of the two places this exact background was duplicated (app/page.tsx being the other);
+ * both now get it for free from the shared app/layout.tsx + components/layout/AppBackground.tsx.
+ * The character and every lens card are otherwise untouched.
  */
 "use client";
 
@@ -76,13 +81,7 @@ export function HomeGateway({ clientBrand = DEFAULT_CLIENT_BRAND }: HomeGatewayP
   const showWorker = Boolean(clientBrand.workerImageSrc) && !workerImageFailed;
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#0B0D17] px-6 py-16">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0"
-        style={{ background: "radial-gradient(600px circle at 50% 30%, rgba(99,102,241,0.10), transparent 60%)" }}
-      />
-
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 py-16">
       {/* Worker character - real asset, 0.8:1 (447x558px, confirmed) box matching its actual
           aspect ratio. Positioned to one side of the header so it doesn't compete with the
           brand mark or the three lens cards below - decorative, aria-hidden, not the only way

@@ -9,6 +9,11 @@
  * (DemoWalkthroughEntry) is only the UX-level half of this; this notFound() call is the real,
  * structural control, same relationship as shouldShowRegistrationLink has to the backend's own
  * RegistrationDisabledError.
+ *
+ * PROCUREIQ-APP-BACKGROUND-R1: dropped this layout's own `min-h-screen bg-white` wrapper - the
+ * parent app/price-reviews/layout.tsx now provides that one opaque panel for the whole subtree;
+ * keeping a second one here would have nested a full-viewport-height white div inside that
+ * already-bounded, rounded panel, breaking its rounded corners.
  */
 import { notFound } from "next/navigation";
 import { isDemoModeEnabled } from "@/lib/demo-mode";
@@ -20,9 +25,9 @@ export default function PriceReviewDemoLayout({ children }: { children: React.Re
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <>
       <IllustrativeDemoBanner />
       {children}
-    </div>
+    </>
   );
 }

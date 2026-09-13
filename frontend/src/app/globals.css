@@ -1,3 +1,19 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/**
+ * Global ProcureIQ background design tokens. Every value here is an EXACT value already in use
+ * elsewhere in this codebase before this change - nothing invented. Previously duplicated,
+ * byte-for-byte identical, inline in both app/page.tsx and components/gateway/HomeGateway.tsx
+ * (`bg-[#0B0D17]` plus the same `radial-gradient(600px circle at 50% 30%, rgba(99,102,241,0.10),
+ * transparent 60%)`); now defined once here and consumed by components/layout/AppBackground.tsx,
+ * which app/layout.tsx renders once at the root so it applies to every route automatically.
+ */
+:root {
+  --app-bg-base: #0b0d17;
+  --app-bg-glow: radial-gradient(600px circle at 50% 30%, rgba(99, 102, 241, 0.1), transparent 60%);
+  --app-surface: #131625;
+  --app-border: #1f2438;
+  --app-accent: #6366f1;
+}
