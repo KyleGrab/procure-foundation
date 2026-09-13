@@ -317,8 +317,10 @@ class TestApprovedServicesNoLongerReadTheWallClock:
     def test_build_inventory_lens_reads_no_wall_clock(self):
         self._assert_function_reads_no_wall_clock(canvas_service.build_inventory_lens)
 
-    def test_close_period_is_deliberately_unchanged_and_still_reads_the_wall_clock(self):
-        """Confirms the exclusion actually held - close_period must still call date.today()
-        internally, proving this phase did not touch it."""
-        source = inspect.getsource(rebate_service.close_period)
-        assert "date.today()" in source
+    def test_close_period_now_also_reads_no_wall_clock(self):
+        """close_period was deliberately excluded from THIS phase (BUSINESS-DATE-SEMANTICS-
+        IMPLEMENTATION-R1) and still called date.today() at the time this file was written - see
+        BUSINESS-DATE-CLOSE-PERIOD-ORG-LOCAL-R1 (tests/test_close_period_business_date.py) for
+        the dedicated phase and focused tests that closed that gap afterward. This assertion is
+        updated to match, rather than left asserting stale, now-false behaviour."""
+        self._assert_function_reads_no_wall_clock(rebate_service.close_period)

@@ -254,7 +254,7 @@ async def check_threshold_alert(
 
 async def close_period(
     db: AsyncSession, *, organisation_id: int, user_id: int | None,
-    period_actual: RebatePeriodActual, today: date | None = None,
+    period_actual: RebatePeriodActual, as_of_date: date,
 ) -> RebatePeriodActual:
     """
     The 'formal monthly period-close snapshot' product decision. Locks earned_amount at whatever
@@ -262,18 +262,22 @@ async def close_period(
     for every period_actual where is_period_due_for_close() is true; user_id is None for that
     automated path, set for a manual early-close if the service layer ever exposes one (not
     built in this delivery - spec doesn't call for early close, only natural period-end close).
+
+    BUSINESS-DATE-CLOSE-PERIOD-ORG-LOCAL-R1: as_of_date is always the caller's own resolved
+    organisation business date (app.db.session.get_organisation_business_date) - this function no
+    longer reads a real clock itself. The is_period_due_for_close comparison itself (today >=
+    period_end) is unchanged; only where "today" comes from has moved to the outer boundary.
     """
-    today = today or date.today()
-    if not is_period_due_for_close(period_actual.period_end, today):
+    if not is_period_due_for_close(period_actual.period_end, as_of_date):
         raise ConflictError(
-            f"Period ends {period_actual.period_end}, not yet due for close as of {today}"
+            f"Period ends {period_actual.period_end}, not yet due for close as of {as_of_date}"
         )
     if period_actual.earned_amount is not None:
         raise ConflictError("Period has already been closed")
 
     period_actual.earned_amount = period_actual.expected_amount
     period_actual.earned_at = datetime.now(UTC)
-    _refresh_status(period_actual, today=today, period_closed=True)
+    _refresh_status(period_actual, today=as_of_date, period_closed=True)
 
     await audit_service.record(
         db, organisation_id=organisation_id, user_id=user_id, action="rebate_period_closed",

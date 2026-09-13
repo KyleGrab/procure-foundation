@@ -177,11 +177,13 @@ async def close_rebate_period(
     agreement_public_id: str, period_public_id: str,
     claims: AccessTokenClaims = Depends(require_permission(Permission.APPROVE_SAVINGS)),
     db: AsyncSession = Depends(get_db),
+    as_of_date: date = Depends(get_organisation_business_date),
 ) -> RebatePeriodActualRead:
     agreement = await _get_agreement(db, agreement_public_id)
     period_actual = await _get_period_actual(db, agreement.id, period_public_id)
     closed = await rebate_service.close_period(
-        db, organisation_id=claims.active_org_id, user_id=claims.user_id, period_actual=period_actual
+        db, organisation_id=claims.active_org_id, user_id=claims.user_id, period_actual=period_actual,
+        as_of_date=as_of_date,
     )
     return _to_period_actual_read_model(closed, agreement)
 
