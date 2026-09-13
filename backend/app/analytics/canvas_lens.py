@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 from enum import Enum
+from itertools import pairwise
 
 
 class NodeStatus(str, Enum):
@@ -309,7 +310,7 @@ def build_management_lens_graph(summary: ManagementSummaryInput) -> CanvasGraph:
     chain = ["gross_revenue", "cogs", "warehouse_abc", "logistics_cts", "net_profitability", "working_capital_summary"]
     edges = [
         CanvasEdge(id=f"{a}->{b}", source_id=a, target_id=b, status=NodeStatus.POSITIVE)
-        for a, b in zip(chain, chain[1:])
+        for a, b in pairwise(chain)
     ]
     edges += [
         CanvasEdge(id="working_capital_summary->node-dso", source_id="working_capital_summary",

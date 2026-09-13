@@ -153,6 +153,28 @@ class TestManagementLensGraph(unittest.TestCase):
              "working_capital_summary", "node-dso", "node-dio", "node-dpo", "node-ccc"},
         )
 
+    def test_fixed_chain_produces_five_ordered_successive_pair_edges(self):
+        # BACKEND-RUFF-SIM115-PUBLISH-AND-RUF007-REVIEW-R1 / BACKEND-RUFF-RUF007-FIX-R1: this is
+        # the targeted proof that zip(chain, chain[1:]) and itertools.pairwise(chain) produce the
+        # identical, exactly-ordered 5-edge sequence for the fixed 6-node management chain -
+        # filtered by source_id/target_id membership (not list position), so it isn't confused
+        # with the separate working_capital_summary->{dso,dio,dpo} or {dio,dso,dpo}->ccc edges
+        # built afterward in the same function.
+        graph = build_management_lens_graph(self._summary())
+        chain = ["gross_revenue", "cogs", "warehouse_abc", "logistics_cts",
+                 "net_profitability", "working_capital_summary"]
+        chain_edges = [
+            (e.source_id, e.target_id) for e in graph.edges
+            if e.source_id in chain and e.target_id in chain
+        ]
+        self.assertEqual(chain_edges, [
+            ("gross_revenue", "cogs"),
+            ("cogs", "warehouse_abc"),
+            ("warehouse_abc", "logistics_cts"),
+            ("logistics_cts", "net_profitability"),
+            ("net_profitability", "working_capital_summary"),
+        ])
+
     def test_ccc_node_value_is_dio_plus_dso_minus_dpo(self):
         graph = build_management_lens_graph(self._summary())
         ccc_node = next(n for n in graph.nodes if n.id == "node-ccc")
