@@ -144,6 +144,49 @@ class TestInventoryValuationRowValidation(unittest.TestCase):
         error_fields = {i.field for i in results[0]["issues"] if i.severity == IssueSeverity.ERROR}
         self.assertEqual(error_fields, {"supplier_sku", "quantity_on_hand", "unit_cost"})
 
+    def test_multiple_rows_each_retain_their_own_field_row_number_and_issues_without_bleed(self):
+        # BACKEND-RUFF-B023-REVIEW-R1: _parse_required_decimal is a closure defined fresh inside
+        # the row loop, over `row`/`issues`/`idx` - flagged by Ruff's B023 (function does not
+        # bind loop variable) even though it's always called within the same iteration that
+        # defines it. This is the multi-row proof that no gap in the previous single-row-only
+        # test suite could have caught: three distinct rows, each with its own defect (or none),
+        # in one call - proving row 1's missing quantity_on_hand never leaks into row 2's issues,
+        # row 2's malformed unit_cost never leaks into row 1's or row 3's, and every issue is
+        # tagged with its OWN row's row_number, not a stale or shared one.
+        results = validate_inventory_valuation_rows([
+            self._valid_row(quantity_on_hand=""),  # [DEMO] row 1: missing quantity_on_hand
+            self._valid_row(unit_cost="not-a-number"),  # [DEMO] row 2: malformed unit_cost
+            # [DEMO] row 3: fully valid, including a total_valuation that exactly matches
+            # quantity_on_hand * unit_cost (124 * 137.73 = 17078.52) - genuinely issue-free,
+            # not just error-free, so this row is an unambiguous "nothing to report" control.
+            self._valid_row(total_valuation="17078.52"),
+        ])
+        self.assertEqual(len(results), 3)
+
+        row_1, row_2, row_3 = results
+        self.assertEqual(row_1["row_number"], 1)
+        self.assertEqual(row_2["row_number"], 2)
+        self.assertEqual(row_3["row_number"], 3)
+
+        self.assertFalse(row_1["is_valid"])
+        self.assertEqual(len(row_1["issues"]), 1)
+        self.assertEqual(row_1["issues"][0].row_number, 1)
+        self.assertEqual(row_1["issues"][0].field, "quantity_on_hand")
+        self.assertEqual(row_1["issues"][0].severity, IssueSeverity.ERROR)
+
+        self.assertFalse(row_2["is_valid"])
+        self.assertEqual(len(row_2["issues"]), 1)
+        self.assertEqual(row_2["issues"][0].row_number, 2)
+        self.assertEqual(row_2["issues"][0].field, "unit_cost")
+        self.assertEqual(row_2["issues"][0].severity, IssueSeverity.ERROR)
+
+        self.assertTrue(row_3["is_valid"])
+        self.assertEqual(row_3["issues"], [])
+
+        # No cross-iteration bleed: row 1 never sees row 2's field, row 2 never sees row 1's.
+        self.assertNotIn("unit_cost", {i.field for i in row_1["issues"]})
+        self.assertNotIn("quantity_on_hand", {i.field for i in row_2["issues"]})
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -40,7 +40,10 @@ def validate_inventory_valuation_rows(rows: list[dict[str, str | None]]) -> list
 
         parsed["description"] = str(row.get("description") or "").strip() or None
 
-        def _parse_required_decimal(field: str, label: str) -> Decimal | None:
+        def _parse_required_decimal(
+            field: str, label: str,
+            row: dict[str, str | None] = row, issues: list[ValidationIssue] = issues, idx: int = idx,
+        ) -> Decimal | None:
             raw = row.get(field)
             if raw is None or not str(raw).strip():
                 issues.append(ValidationIssue(idx, field, IssueSeverity.ERROR, f"Missing {label}"))
