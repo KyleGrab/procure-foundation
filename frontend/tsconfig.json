@@ -25,6 +25,7 @@
     "src/lib/viewport-scaling.test.ts",
     "src/lib/demo-mode.test.ts",
     "src/lib/decimal-display.test.ts",
-    "src/lib/price-review-line-classification.test.ts"
+    "src/lib/price-review-line-classification.test.ts",
+    "src/lib/demo-login-bypass-guard.test.ts"
   ]
 }

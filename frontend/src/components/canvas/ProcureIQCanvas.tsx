@@ -27,6 +27,7 @@ import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CustomLensNode } from "./CustomLensNode";
 import { canvasApi, type CanvasApiEdge, type CanvasApiNode, type CanvasApiResponse, type LensId } from "@/lib/canvas-api";
+import { ProcurementLensDemoCallout } from "@/components/price-review-demo/ProcurementLensDemoCallout";
 
 const LENSES: { id: LensId; label: string }[] = [
   { id: "procurement", label: "Procurement" },
@@ -156,6 +157,8 @@ export function ProcureIQCanvas() {
               </button>
             </div>
           </div>
+
+          {activeLens === "procurement" && <ProcurementLensDemoCallout />}
 
           {error && (
             <div className="mt-6 rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-400">
