@@ -45,7 +45,7 @@ _DEDUCTION_LINES = (
 _SIGNED_LINES = ("retro_pricing_adjustment", "supplier_recoveries_allowances")
 
 
-def calculate_gross_to_net_waterfall(inputs: GrossToNetWaterfallInput) -> dict:
+def calculate_gross_to_net_waterfall(inputs: GrossToNetWaterfallInput) -> dict[str, object]:
     """
     Sequential deduction chain. gross_sales minus settlement_discounts, volume_growth_rebates,
     credit_notes_issued, operational_claims_returns; plus/minus retro_pricing_adjustment and
@@ -54,9 +54,23 @@ def calculate_gross_to_net_waterfall(inputs: GrossToNetWaterfallInput) -> dict:
     Any line left as None means "not yet sourced" - the function refuses to substitute zero.
     is_complete=False, net_revenue=None, missing_lines lists every absent field together (not
     just the first one found), so a caller can report the whole gap in one pass rather than
-    discovering it one field at a time across repeated calls.
+    discovering it one field at a time across repeated calls. The six per-line Decimal fields
+    below are present in the returned dict ONLY when is_complete is True - omitted (not set to
+    None) when incomplete, matching this function's existing, unchanged contract.
+
+    Return type is dict[str, object], not a bare dict - Mypy cannot verify the exact heterogeneous
+    shape (bool / list[str] / Decimal / Decimal | None) without either a TypedDict restructuring
+    of the per-line assignment loop below (a larger change than this fix's scope) or losing the
+    field-omission behaviour described above, so `object` is the accurate, honest common type
+    rather than an unchecked `Any`.
+
+    The `assert ... is not None` calls below are pure type-narrowing, not a runtime safety net:
+    by the time this line executes, `missing_lines` has already proven every value in
+    all_line_values is non-None (the guard above returns before this point otherwise), so the
+    assertion can never actually fail - it exists only so Mypy's static analysis, which cannot see
+    that cross-statement guarantee on its own, can confirm what is already true at runtime.
     """
-    all_line_values = {
+    all_line_values: dict[str, Decimal | None] = {
         "settlement_discounts": inputs.settlement_discounts,
         "volume_growth_rebates": inputs.volume_growth_rebates,
         "credit_notes_issued": inputs.credit_notes_issued,
@@ -74,14 +88,19 @@ def calculate_gross_to_net_waterfall(inputs: GrossToNetWaterfallInput) -> dict:
 
     net_revenue = inputs.gross_sales
     for line in _DEDUCTION_LINES:
-        net_revenue -= all_line_values[line]
+        value = all_line_values[line]
+        assert value is not None, f"{line} was already confirmed present by the completeness check above"
+        net_revenue -= value
     for line in _SIGNED_LINES:
-        net_revenue += all_line_values[line]
+        value = all_line_values[line]
+        assert value is not None, f"{line} was already confirmed present by the completeness check above"
+        net_revenue += value
 
-    result = {
+    result: dict[str, object] = {
         "is_complete": True, "missing_lines": [], "gross_sales": round_currency(inputs.gross_sales),
         "net_revenue": round_currency(net_revenue),
     }
     for name, value in all_line_values.items():
+        assert value is not None, f"{name} was already confirmed present by the completeness check above"
         result[name] = round_currency(value)
     return result

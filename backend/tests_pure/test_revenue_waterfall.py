@@ -100,5 +100,110 @@ class TestGrossToNetWaterfall(unittest.TestCase):
             )
 
 
+class TestGrossToNetWaterfallNullabilityAndPrecision(unittest.TestCase):
+    """BACKEND-FINANCIAL-CORRECTNESS-AND-CI-R1: focused regression proof for the Mypy nullable-
+    Decimal fix at line 77 (Decimal -= Decimal | None). These tests exist specifically to prove
+    the assert-based type-narrowing introduced by that fix changes nothing about real behaviour -
+    every known-value and every unknown-value path must produce byte-for-byte the same result as
+    before the fix, since the fix is type-only. [DEMO] fixtures throughout, per this file's own
+    established convention - never presented as figures this business has actually recorded."""
+
+    _ALL_OPTIONAL_LINES = (
+        "settlement_discounts", "volume_growth_rebates", "credit_notes_issued",
+        "operational_claims_returns", "retro_pricing_adjustment", "supplier_recoveries_allowances",
+    )
+
+    def _demo_all_known(self, **overrides) -> GrossToNetWaterfallInput:
+        # [DEMO]: a clean, round-number complete waterfall - every one of the six optional lines
+        # is a real (non-None) Decimal, chosen specifically to include a fractional-cent value
+        # (settlement_discounts) that a float computation could silently mis-round.
+        fields = {
+            "gross_sales": Decimal("50000.33"),
+            "settlement_discounts": Decimal("1000.11"),
+            "volume_growth_rebates": Decimal("2000.22"),
+            "credit_notes_issued": Decimal("300.00"),
+            "operational_claims_returns": Decimal("150.00"),
+            "retro_pricing_adjustment": Decimal("-50.00"),
+            "supplier_recoveries_allowances": Decimal("25.00"),
+        }
+        fields.update(overrides)
+        return GrossToNetWaterfallInput(**fields)
+
+    def test_two_known_decimal_inputs_produce_the_exact_expected_decimal_result(self):
+        # Requirement 1: known inputs -> exact expected Decimal result, independently computed
+        # here (not just re-asserting a hardcoded literal the production code also hardcodes).
+        inputs = self._demo_all_known()
+        expected = (
+            inputs.gross_sales
+            - inputs.settlement_discounts - inputs.volume_growth_rebates
+            - inputs.credit_notes_issued - inputs.operational_claims_returns
+            + inputs.retro_pricing_adjustment + inputs.supplier_recoveries_allowances
+        ).quantize(Decimal("0.0001"))
+
+        result = calculate_gross_to_net_waterfall(inputs)
+
+        self.assertTrue(result["is_complete"])
+        self.assertEqual(result["net_revenue"], expected)
+        self.assertEqual(result["net_revenue"], Decimal("46525.0000"))  # explicit worked figure
+
+    def test_each_individually_unknown_line_returns_the_documented_unavailable_result(self):
+        # Requirement 2: each of the six optional lines, made unknown one at a time, must return
+        # the documented unavailable result (is_complete=False, net_revenue=None) and must not
+        # raise TypeError - proving the early-return guard, not the arithmetic path, is what
+        # actually runs for every one of them, not just the one line the pre-existing tests cover.
+        for line_name in self._ALL_OPTIONAL_LINES:
+            with self.subTest(line=line_name):
+                inputs = self._demo_all_known(**{line_name: None})
+                try:
+                    result = calculate_gross_to_net_waterfall(inputs)
+                except TypeError as exc:
+                    self.fail(f"{line_name}=None raised TypeError instead of returning an unavailable result: {exc}")
+                self.assertFalse(result["is_complete"])
+                self.assertIsNone(result["net_revenue"])
+                self.assertEqual(result["missing_lines"], [line_name])
+
+    def test_unknown_data_is_never_converted_to_zero(self):
+        # Requirement 3: the missing line's absence must never be silently read back as zero -
+        # net_revenue is None (not Decimal(0)), and the missing field itself is omitted from the
+        # result entirely (this function's existing, unchanged contract), never present as 0.
+        inputs = self._demo_all_known(operational_claims_returns=None)
+        result = calculate_gross_to_net_waterfall(inputs)
+
+        self.assertIsNone(result["net_revenue"])
+        self.assertNotEqual(result["net_revenue"], Decimal(0))
+        self.assertNotIn("operational_claims_returns", result)
+
+    def test_calculation_preserves_decimal_precision_and_never_uses_float(self):
+        # Requirement 4: the result is a real Decimal (never float), quantized to exactly four
+        # places per this module's own CURRENCY_QUANTIZE - the fractional-cent settlement_discounts
+        # value above is specifically chosen so a float leak would show up as visible drift here.
+        result = calculate_gross_to_net_waterfall(self._demo_all_known())
+
+        net_revenue = result["net_revenue"]
+        self.assertIsInstance(net_revenue, Decimal)
+        self.assertNotIsInstance(net_revenue, float)
+        self.assertEqual(str(net_revenue), "46525.0000")  # exact string form - no float noise
+
+    def test_financial_identity_reconciles_exactly_against_the_real_ttm_waterfall(self):
+        # Requirement 5: reuses the already-established REAL Gourmet TTM figures (not a fresh
+        # fabrication) to prove the defined Decimal relationship - Turnover - Discount allowed -
+        # Rebates Paid = Net Sales - holds exactly, independently re-derived here.
+        gross_sales = Decimal("364588837.16")
+        settlement_discounts = Decimal("8240399.16")
+        volume_growth_rebates = Decimal("3145913.07")
+        inputs = GrossToNetWaterfallInput(
+            gross_sales=gross_sales,
+            settlement_discounts=settlement_discounts, volume_growth_rebates=volume_growth_rebates,
+            credit_notes_issued=Decimal(0), operational_claims_returns=Decimal(0),
+            retro_pricing_adjustment=Decimal(0), supplier_recoveries_allowances=Decimal(0),
+        )
+        expected_net_sales = (gross_sales - settlement_discounts - volume_growth_rebates).quantize(Decimal("0.0001"))
+
+        result = calculate_gross_to_net_waterfall(inputs)
+
+        self.assertEqual(result["net_revenue"], expected_net_sales)
+        self.assertEqual(result["net_revenue"], Decimal("353202524.9300"))  # real TTM Net Sales
+
+
 if __name__ == "__main__":
     unittest.main()
