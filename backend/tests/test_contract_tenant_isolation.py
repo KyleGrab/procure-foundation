@@ -29,7 +29,7 @@ async def _register_org_with_supplier_and_contract(client, email: str, org_name:
 
 
 async def test_contract_from_other_org_returns_404_not_data(client):
-    token_a, contract_a_id = await _register_org_with_supplier_and_contract(
+    _, contract_a_id = await _register_org_with_supplier_and_contract(
         client, "contract-org-a@example.com", "Contract Org A"
     )
     token_b, _ = await _register_org_with_supplier_and_contract(

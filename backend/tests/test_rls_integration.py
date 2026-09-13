@@ -365,7 +365,7 @@ class TestCrossTenantIsolation:
         # RLS policies in this schema use USING only (no WITH CHECK) - meaning the SELECT side
         # is proven above, but an UPDATE targeting another tenant's row by primary key must also
         # affect zero rows, not raise, and not silently succeed.
-        org_a_id, supplier_a_id = _insert_org_and_supplier(app_dsn, "RLS Test Org D", "RLS Test Supplier D")
+        _, supplier_a_id = _insert_org_and_supplier(app_dsn, "RLS Test Org D", "RLS Test Supplier D")
         org_b_id, _ = _insert_org_and_supplier(app_dsn, "RLS Test Org E", "RLS Test Supplier E")
 
         with psycopg.connect(app_dsn) as conn:

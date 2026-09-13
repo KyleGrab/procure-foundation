@@ -87,7 +87,7 @@ class TestAnnualImpact(unittest.TestCase):
         self.assertEqual(confidence_partial, "medium")
         self.assertEqual(annualized_partial, Decimal("1000.0000"))
 
-        annualized_low, confidence_low = calculate_annualized_quantity(Decimal(100), Decimal(3))
+        _, confidence_low = calculate_annualized_quantity(Decimal(100), Decimal(3))
         self.assertEqual(confidence_low, "low")
 
 

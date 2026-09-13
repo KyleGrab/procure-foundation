@@ -186,7 +186,7 @@ class TestPermissionAndTenantIsolation:
         assert resp.status_code == 403
 
     async def test_another_organisation_cannot_read_or_review_the_flag(self, client, db_session):
-        token_a, org_a_id, sa, sb = await _register_org_with_two_suppliers(
+        _, org_a_id, sa, sb = await _register_org_with_two_suppliers(
             client, "consol-cross-a@example.com", "Consol Cross Org A"
         )
         token_b, _, _, _ = await _register_org_with_two_suppliers(

@@ -65,7 +65,7 @@ async def test_rebate_period_actual_from_other_org_returns_404(client):
 
 
 async def test_purchase_transaction_upload_isolated_by_supplier_org(client):
-    token_a, supplier_a = await _register_org_with_supplier(client, "txn-org-a@example.com", "Txn Org A")
+    _, supplier_a = await _register_org_with_supplier(client, "txn-org-a@example.com", "Txn Org A")
     token_b, _ = await _register_org_with_supplier(client, "txn-org-b@example.com", "Txn Org B")
 
     # Org B must not be able to upload transactions against Org A's supplier at all - the

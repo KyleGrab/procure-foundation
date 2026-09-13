@@ -40,7 +40,7 @@ async def test_purchase_order_from_other_org_returns_404(client):
 
 
 async def test_purchase_invoice_cannot_be_ingested_against_another_orgs_supplier(client):
-    token_a, supplier_a = await _register_org_with_supplier(client, "inv-org-a@example.com", "Invoice Org A")
+    _, supplier_a = await _register_org_with_supplier(client, "inv-org-a@example.com", "Invoice Org A")
     token_b, _ = await _register_org_with_supplier(client, "inv-org-b@example.com", "Invoice Org B")
 
     # Org B must not be able to ingest an invoice against Org A's supplier_id - the supplier

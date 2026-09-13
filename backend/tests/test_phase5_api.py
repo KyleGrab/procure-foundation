@@ -73,7 +73,7 @@ async def test_duplicate_sku_scan_for_unknown_supplier_returns_404(client):
 
 
 async def test_duplicate_sku_scan_cannot_target_another_orgs_supplier(client):
-    token_a, supplier_a = await _register_org_with_supplier(client, "dup-cross-a@example.com", "Dup Cross Org A")
+    _, supplier_a = await _register_org_with_supplier(client, "dup-cross-a@example.com", "Dup Cross Org A")
     token_b, _ = await _register_org_with_supplier(client, "dup-cross-b@example.com", "Dup Cross Org B")
 
     # Org B scanning against Org A's supplier_public_id must 404 - the supplier lookup itself is

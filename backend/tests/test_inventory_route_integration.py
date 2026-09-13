@@ -115,7 +115,7 @@ async def test_upload_scoped_to_own_org_location_only(client, db_session):
     # A location belonging to a different organisation must never be usable, even by guessing a
     # valid-looking UUID - confirms the query's WHERE organisation_id == claims.active_org_id
     # clause actually does its job.
-    token_a, org_a, _ = await _register_org(client, "iv-route-scope-a@example.com", "IV Route Scope Org A")
+    token_a, _, _ = await _register_org(client, "iv-route-scope-a@example.com", "IV Route Scope Org A")
     _, org_b, _ = await _register_org(client, "iv-route-scope-b@example.com", "IV Route Scope Org B")
     location_b_public_id = await _create_location(db_session, org_b, "WH-B-ONLY")
 
