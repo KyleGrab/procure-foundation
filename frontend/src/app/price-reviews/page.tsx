@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import type { PriceReview } from "@/types/price-review";
+import { DemoWalkthroughEntry } from "@/components/price-review-demo/DemoWalkthroughEntry";
 
 export default function PriceReviewsPage() {
   const [reviews, setReviews] = useState<PriceReview[] | null>(null);
@@ -22,11 +23,14 @@ export default function PriceReviewsPage() {
 
   return (
     <main className="mx-auto max-w-4xl p-8">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">Supplier Price Reviews</h1>
-        <Link href="/price-reviews/new" className="rounded bg-slate-900 px-4 py-2 text-white">
-          New Price Review
-        </Link>
+        <div className="flex items-center gap-3">
+          <DemoWalkthroughEntry />
+          <Link href="/price-reviews/new" className="rounded bg-slate-900 px-4 py-2 text-white">
+            New Price Review
+          </Link>
+        </div>
       </div>
       {reviews && reviews.length === 0 && (
         <p className="text-slate-600">No price reviews yet. Start one to compare a supplier&apos;s price lists.</p>
