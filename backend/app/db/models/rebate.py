@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 
 from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Numeric, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -63,9 +64,9 @@ class RebateAgreement(Base, TenantScopedMixin):
     rebate_type: Mapped[str] = mapped_column(String(32), nullable=False)  # RebateType values
     period_type: Mapped[str] = mapped_column(String(16), nullable=False, default="quarterly")
 
-    flat_rate_pct: Mapped[float | None] = mapped_column(Numeric(9, 6))
+    flat_rate_pct: Mapped[Decimal | None] = mapped_column(Numeric(9, 6))
     bands: Mapped[list | None] = mapped_column(JSONB)
-    fixed_amount: Mapped[float | None] = mapped_column(Numeric(18, 4))
+    fixed_amount: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="ZAR")
 
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="active")
@@ -137,12 +138,12 @@ class RebatePeriodActual(Base, TenantScopedMixin):
     period_start: Mapped[date] = mapped_column(Date, nullable=False)
     period_end: Mapped[date] = mapped_column(Date, nullable=False)
 
-    actual_spend: Mapped[float | None] = mapped_column(Numeric(18, 4))
-    actual_volume: Mapped[float | None] = mapped_column(Numeric(18, 4))
+    actual_spend: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
+    actual_volume: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
     entry_source: Mapped[str] = mapped_column(String(32), nullable=False, default=EntrySource.MANUAL.value)
     # 'manual' (ADR-012/4a) | 'transaction_aggregation' (4b)
 
-    expected_amount: Mapped[float | None] = mapped_column(Numeric(18, 4))
+    expected_amount: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
     expected_amount_status: Mapped[str] = mapped_column(String(32), nullable=False, default="unknown")
     expected_amount_source_basis: Mapped[str | None] = mapped_column(String(64))
     expected_amount_calculated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -151,9 +152,9 @@ class RebatePeriodActual(Base, TenantScopedMixin):
     expected_amount_current_event_id: Mapped[int | None] = mapped_column(
         ForeignKey("financial_amount_status_events.id")
     )
-    earned_amount: Mapped[float | None] = mapped_column(Numeric(18, 4))
+    earned_amount: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
     earned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    received_amount: Mapped[float | None] = mapped_column(Numeric(18, 4))
+    received_amount: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
     received_reference: Mapped[str | None] = mapped_column(String(128))  # credit note / payment ref
 
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="on_track")
