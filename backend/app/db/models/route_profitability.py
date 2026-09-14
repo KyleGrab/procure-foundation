@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date
+from decimal import Decimal
 
 from sqlalchemy import Boolean, Date, ForeignKey, Numeric, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -38,16 +39,16 @@ class RouteProfitabilitySnapshot(Base, TenantScopedMixin):
     vehicle_registration: Mapped[str | None] = mapped_column(String(32))
     route_reference: Mapped[str | None] = mapped_column(String(64))
 
-    revenue: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
-    cogs: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
-    trade_spend: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
+    revenue: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    cogs: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    trade_spend: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
     revenue_basis: Mapped[str] = mapped_column(String(16), nullable=False)
 
-    trip_fixed_costs: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
-    distance_variable_costs: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
-    activity_time_costs: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
+    trip_fixed_costs: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    distance_variable_costs: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    activity_time_costs: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
 
-    net_net_profit: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
+    net_net_profit: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
     is_net_revenue_negative: Mapped[bool] = mapped_column(Boolean, nullable=False)
 
     corrects_id: Mapped[int | None] = mapped_column(ForeignKey("route_profitability_snapshots.id"))

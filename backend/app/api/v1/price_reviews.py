@@ -7,13 +7,14 @@ from __future__ import annotations
 
 import uuid
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, Depends, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analytics.price_review_calculations import PriceReviewMatchStatus
-from app.core.constants import Permission
+from app.core.constants import Currency, Permission
 from app.core.exceptions import NotFoundError, ValidationFailedError
 from app.core.permissions import require_permission
 from app.core.security import AccessTokenClaims
@@ -88,7 +89,7 @@ async def _resolve_supplier_public_id(db: AsyncSession, supplier_id: int) -> uui
 def _to_read_model(review: PriceReview, supplier_public_id: uuid.UUID) -> PriceReviewRead:
     return PriceReviewRead(
         public_id=review.public_id, supplier_public_id=supplier_public_id, status=review.status,
-        effective_date=review.effective_date, currency=review.currency, price_basis=review.price_basis,
+        effective_date=review.effective_date, currency=Currency(review.currency), price_basis=review.price_basis,
         completed_at=review.completed_at,
     )
 
@@ -126,7 +127,7 @@ async def upload_price_list_file(
     file: UploadFile,
     claims: AccessTokenClaims = Depends(require_permission(Permission.UPLOAD_DATA)),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> dict[str, Any]:
     if file_type not in ("previous", "new"):
         raise ValidationFailedError("file_type must be 'previous' or 'new'")
 
@@ -165,7 +166,7 @@ async def confirm_column_mapping(
     payload: ColumnMappingConfirm,
     claims: AccessTokenClaims = Depends(require_permission(Permission.UPLOAD_DATA)),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> dict[str, Any]:
     """
     Confirms a user-reviewed mapping (spec Section 3's requirement that ambiguous mappings are
     always confirmed, never auto-applied). Re-reads the stored file via object storage, applies
@@ -224,7 +225,7 @@ async def run_product_matching(
     review_public_id: str,
     claims: AccessTokenClaims = Depends(require_permission(Permission.UPLOAD_DATA)),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> dict[str, Any]:
     """
     Reads both files' staged_rows (populated by confirm_column_mapping above) and runs the
     proven matching pipeline (app.matching.scorer - tested in tests_pure/test_matching.py,
@@ -348,7 +349,7 @@ async def create_opportunity_from_line(
     review_public_id: str, line_public_id: str,
     claims: AccessTokenClaims = Depends(require_permission(Permission.APPROVE_OPPORTUNITIES)),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> dict[str, Any]:
     review = await _get_review(db, review_public_id)
     line = await _get_line(db, review.id, line_public_id)
     opportunity = await price_review_service.create_opportunity_from_line(
@@ -373,7 +374,7 @@ async def generate_negotiation_brief(
     review_public_id: str,
     claims: AccessTokenClaims = Depends(require_permission(Permission.ACCESS_AI)),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> dict[str, Any]:
     """
     spec Section 26. Never executed in this sandbox - no network, no LLM_API_KEY (see
     app/ai/llm_provider.py and app/services/negotiation_brief_service.py docstrings). Wired here
@@ -405,7 +406,7 @@ async def export_price_review_excel(
     review_public_id: str,
     claims: AccessTokenClaims = Depends(require_permission(Permission.EXPORT_DATA)),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> dict[str, Any]:
     """
     Returns a storage path in this delivery rather than streaming bytes directly - swapping to a
     StreamingResponse/FileResponse once this is running against a real ASGI server is a route

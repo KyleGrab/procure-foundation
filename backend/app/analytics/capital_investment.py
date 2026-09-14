@@ -16,6 +16,7 @@ conventionally negative), indices 1..N are net operational inflows for years 1 t
 from __future__ import annotations
 
 from decimal import ROUND_HALF_EVEN, Decimal
+from typing import Any
 
 CURRENCY_QUANTIZE = Decimal("0.0001")
 RATE_QUANTIZE = Decimal("0.000001")
@@ -154,7 +155,7 @@ def apply_tax_shield_to_cash_flows(
 
 def flag_speculative_residual_value(
     residual_value: Decimal, initial_capital_outlay: Decimal, threshold_pct: Decimal = Decimal("0.20"),
-) -> dict:
+) -> dict[str, Any]:
     """
     threshold_pct defaults to 20% - this IS a policy/materiality threshold, not an operational
     driver (same distinction already established in this codebase for
@@ -187,7 +188,7 @@ def flag_speculative_residual_value(
 def evaluate_capital_investment(
     discount_rate: Decimal, cash_flows: list[Decimal], residual_value: Decimal,
     residual_flag_threshold_pct: Decimal = Decimal("0.20"),
-) -> dict:
+) -> dict[str, Any]:
     """
     Bundles NPV, IRR, discounted payback, and the speculative-residual-value flag into one
     evaluation payload - reuses every other function in this module rather than reimplementing

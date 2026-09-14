@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from datetime import UTC
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -197,7 +198,7 @@ async def scan_for_supplier_consolidation(
     return new_flags
 
 
-async def build_consolidation_graph_payload(db: AsyncSession, *, organisation_id: int) -> dict:
+async def build_consolidation_graph_payload(db: AsyncSession, *, organisation_id: int) -> dict[str, Any]:
     """
     DB orchestration only - fetches Supplier/SupplierConsolidationFlag rows for the org and maps
     them into the pure engine's Input dataclasses, then hands off entirely to

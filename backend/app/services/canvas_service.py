@@ -169,7 +169,7 @@ async def build_management_lens(db: AsyncSession, *, organisation_id: int) -> Ca
     current = snapshots[0]
     prior = snapshots[1] if len(snapshots) > 1 else None
 
-    def _decimal_or_none(value) -> Decimal | None:
+    def _decimal_or_none(value: Decimal | None) -> Decimal | None:
         return Decimal(str(value)) if value is not None else None
 
     dso, dio, dpo, ccc = (

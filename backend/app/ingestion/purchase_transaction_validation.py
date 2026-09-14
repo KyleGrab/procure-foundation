@@ -12,14 +12,15 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal, InvalidOperation
+from typing import Any
 
 from app.ingestion.validation import IssueSeverity, ValidationIssue
 
 
-def validate_purchase_transaction_rows(rows: list[dict[str, str | None]]) -> list[dict]:
+def validate_purchase_transaction_rows(rows: list[dict[str, str | None]]) -> list[dict[str, Any]]:
     """Returns one dict per row: {'row_number', 'is_valid', 'issues': [ValidationIssue, ...]}."""
     results = []
-    seen_dupes: dict[tuple, int] = {}
+    seen_dupes: dict[tuple[Any, ...], int] = {}
 
     for idx, row in enumerate(rows, start=1):
         issues: list[ValidationIssue] = []

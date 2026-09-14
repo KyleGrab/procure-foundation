@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,7 +32,7 @@ async def ingest_route_profitability(
     location_id: int | None = None, customer_id: str | None = None,
     vehicle_registration: str | None = None, route_reference: str | None = None,
     corrects_id: int | None = None,
-) -> dict:
+) -> dict[str, Any]:
     """
     Calls calculate_true_route_profitability (raises ValueError/TypeError on any invalid or
     missing input - never reaches this function's DB write on bad data) and persists the result.

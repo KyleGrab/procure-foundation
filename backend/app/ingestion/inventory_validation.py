@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal, InvalidOperation
+from typing import Any
 
 from app.analytics.inventory_calculations import (  # noqa: F401 - re-exported, see module docstring
     GrainViolation,
@@ -27,7 +28,7 @@ from app.analytics.inventory_calculations import (  # noqa: F401 - re-exported, 
 from app.ingestion.validation import IssueSeverity, ValidationIssue
 
 
-def validate_inventory_snapshot_rows(rows: list[dict[str, str | None]]) -> list[dict]:
+def validate_inventory_snapshot_rows(rows: list[dict[str, str | None]]) -> list[dict[str, Any]]:
     """Returns one dict per row: {'row_number', 'is_valid', 'issues': [ValidationIssue, ...]}."""
     results = []
 

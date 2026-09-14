@@ -23,8 +23,10 @@ fabricating or silently dropping a figure:
 """
 from __future__ import annotations
 
+from datetime import date
 from decimal import ROUND_HALF_EVEN, Decimal
 from enum import Enum
+from typing import Any, TypedDict
 
 CURRENCY_QUANTIZE = Decimal("0.0001")
 DAYS_QUANTIZE = Decimal("0.1")
@@ -126,7 +128,7 @@ def resolve_trade_spend_for_period(trade_spend_record: Decimal | None, agreement
 def calculate_customer_net_margin(
     revenue: Decimal, cogs: Decimal, direct_logistics_cost: Decimal, warehouse_abc_cost: Decimal,
     trade_spend: Decimal, revenue_basis: str,
-) -> dict:
+) -> dict[str, Any]:
     """net_revenue = revenue - trade_spend. gross_margin = net_revenue - cogs. cost_to_serve =
     direct_logistics_cost + warehouse_abc_cost. net_margin = gross_margin - cost_to_serve.
     Never clamped at zero - a negative net_margin is the entire point of this calculation
@@ -187,7 +189,7 @@ def calculate_customer_net_margin(
 def calculate_working_capital_metrics(
     ar: Decimal, ap: Decimal, inventory: Decimal, annual_revenue: Decimal, annual_cogs: Decimal,
     cash: Decimal | None = None,
-) -> dict:
+) -> dict[str, Any]:
     """
     DSO = (AR / annual_revenue) * 365, DIO = (inventory / annual_cogs) * 365,
     DPO = (AP / annual_cogs) * 365, CCC = DIO + DSO - DPO. Each ratio is None when its
@@ -215,9 +217,23 @@ class ReconciliationStatus(str, Enum):
     DIVERGENT = "divergent"
 
 
+class ReconciliationResult(TypedDict):
+    """The actual shape check_inventory_reconciliation returns - genuinely Decimal amounts, not
+    `Any`. Naming this precisely (rather than leaving the return type as `dict[str, Any]`) is
+    what let resolve_gated_inventory_value below stay honestly typed `-> Decimal | None`: reading
+    reconciliation["control_total"] out of an untyped dict was silently returning `Any`, which
+    mypy strict correctly refuses to let a Decimal|None-declared function pass through unnoticed."""
+
+    control_total: Decimal
+    sub_ledger_extract: Decimal
+    variance: Decimal
+    is_reconciled: bool
+    status: ReconciliationStatus
+
+
 def check_inventory_reconciliation(
     control_total: Decimal, sub_ledger_extract: Decimal, tolerance: Decimal = Decimal("0.01"),
-) -> dict:
+) -> ReconciliationResult:
     """
     Gate A core: compares a sub-ledger extract against the reconciled control total (the real,
     verified figure - e.g. a Balance Sheet inventory value) that advanced metrics must actually
@@ -237,7 +253,7 @@ def check_inventory_reconciliation(
 
 
 def resolve_gated_inventory_value(
-    reconciliation: dict, timing_bridge_documented: bool = False,
+    reconciliation: ReconciliationResult, timing_bridge_documented: bool = False,
 ) -> Decimal | None:
     """
     The one function every DIO/GMROI/CCC caller must go through instead of picking a figure
@@ -273,7 +289,7 @@ def refuse_timing_bridge_allocation(variance: Decimal, entity_reference: str | N
 
 def validate_reconciliation_bridge_completeness(
     control_total: Decimal, raw_subledger_total: Decimal, bridge_total: Decimal,
-) -> dict:
+) -> dict[str, Any]:
     """
     Migration 0020: checks whether the SUM of real, evidenced bridge line items
     (inventory_reconciliation_bridges rows) actually closes the gap between a sub-ledger extract
@@ -298,7 +314,7 @@ def validate_reconciliation_bridge_completeness(
 
 def calculate_future_replacement_exposure(
     quantity_on_hand: Decimal, current_replacement_unit_cost: Decimal, recorded_mac_unit_cost: Decimal,
-) -> dict:
+) -> dict[str, Any]:
     """
     CIMA P-pillar: a holding gain/loss on agricultural/perishable inputs under price volatility.
     exposure_per_unit = current_replacement_unit_cost - recorded_mac_unit_cost. Positive means
@@ -338,7 +354,7 @@ def flag_replacement_cost_divergence(
     return ratio > materiality_threshold_pct
 
 
-def is_rate_stale(rate_effective_date, as_of_date, staleness_threshold_days: int) -> bool:
+def is_rate_stale(rate_effective_date: date | None, as_of_date: date, staleness_threshold_days: int) -> bool:
     """
     Closes a real, named risk: CostAllocationRule.default_unit_rate is a static figure someone
     sets once, with nothing flagging when it's drifted from reality (a 20% fuel spike, for
@@ -410,7 +426,7 @@ def flag_zero_mass_risk(recorded_mass_kg: Decimal, has_recorded_sales_or_movemen
 def calculate_allocation_variance(
     entity_activity_volume: Decimal, activity_based_rate: Decimal, currently_allocated_cost: Decimal,
     is_fallback_rate: bool,
-) -> dict | None:
+) -> dict[str, Any] | None:
     """
     Compares what an entity (a route, a truck, a customer) is CURRENTLY allocated against what a
     true activity-based rate would allocate it, given its own real activity volume. Exists
@@ -497,7 +513,7 @@ def calculate_variance_vs_prior(current: Decimal | None, prior: Decimal | None) 
     return current - prior
 
 
-def classify_aging_buckets(invoices: list[dict]) -> dict:
+def classify_aging_buckets(invoices: list[dict[str, Any]]) -> dict[str, Any]:
     """
     invoices: [{"amount": Decimal, "days_overdue": int}, ...]. Buckets: current (0-29 days),
     days_30 (30-59), days_60 (60-89), days_90 (90-119), days_120_plus (120+). Boundary is the

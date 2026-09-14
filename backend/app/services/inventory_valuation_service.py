@@ -17,6 +17,7 @@ upload flow would ask "which warehouse is this for" before parsing) is the hones
 from __future__ import annotations
 
 from datetime import date
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,9 +33,9 @@ from app.services import audit_service
 
 async def ingest_inventory_valuation(
     db: AsyncSession, *, organisation_id: int, user_id: int, location_id: int, snapshot_date: date,
-    validated_records: list[dict], source_file_storage_key: str | None = None,
+    validated_records: list[dict[str, Any]], source_file_storage_key: str | None = None,
     file_hash: str | None = None, is_correction: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     """
     validated_records: the `parsed` dicts from
     app.ingestion.inventory_valuation_validation.validate_inventory_valuation_rows for rows where

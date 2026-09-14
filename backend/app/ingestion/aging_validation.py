@@ -6,11 +6,12 @@ transformation before hitting the pure function.
 from __future__ import annotations
 
 from decimal import Decimal, InvalidOperation
+from typing import Any
 
 from app.ingestion.validation import IssueSeverity, ValidationIssue
 
 
-def validate_aging_rows(rows: list[dict[str, str | None]]) -> list[dict]:
+def validate_aging_rows(rows: list[dict[str, str | None]]) -> list[dict[str, Any]]:
     """Batch validator (unlike working capital's single-row shape) - one aging upload is a full
     invoice-level line-item batch for one ledger_type/period."""
     results = []

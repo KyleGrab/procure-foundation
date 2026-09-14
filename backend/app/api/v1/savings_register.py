@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import uuid
 from decimal import Decimal
+from typing import Any
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
@@ -37,7 +38,7 @@ async def _resolve_supplier_public_ids(db: AsyncSession, opportunities: list[Opp
     if not supplier_ids:
         return {}
     result = await db.execute(select(Supplier.id, Supplier.public_id).where(Supplier.id.in_(supplier_ids)))
-    return dict(result.all())
+    return {row.id: row.public_id for row in result.all()}
 
 
 def _to_read_model(opportunity: Opportunity, supplier_public_id: uuid.UUID | None) -> OpportunityRead:
@@ -76,14 +77,17 @@ async def list_savings_register(
         db, organisation_id=claims.active_org_id, savings_type=savings_type
     )
     supplier_public_ids = await _resolve_supplier_public_ids(db, opportunities)
-    return [_to_read_model(o, supplier_public_ids.get(o.supplier_id)) for o in opportunities]
+    return [
+        _to_read_model(o, supplier_public_ids.get(o.supplier_id) if o.supplier_id is not None else None)
+        for o in opportunities
+    ]
 
 
 @router.get("/waterfall")
 async def get_savings_waterfall(
     claims: AccessTokenClaims = Depends(require_permission(Permission.VIEW_FINANCIALS)),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> dict[str, Any]:
     """spec Section 85: value AT each stage, never a blended running total - see
     app.analytics.savings_register.calculate_savings_waterfall's docstring.
 

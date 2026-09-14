@@ -29,6 +29,11 @@ dev = [
     "mypy>=1.13",
     "black>=24.10",
     "testcontainers[postgres]>=4.8",  # backend/tests/test_rls_integration.py - see ADR-011
+    "types-openpyxl>=3.1",  # openpyxl (a real, base dependency - see app/reporting/price_review_excel_export.py,
+    # app/ingestion/excel_reader.py, app/api/v1/inventory.py) ships no inline type hints and no
+    # bundled py.typed marker; without this, `mypy app` fails with "Library stubs not installed
+    # for openpyxl" on every module that imports it. Dev/type-checking concern only - runtime
+    # code never imports this package.
 ]
 # AI-PROVIDER-RESILIENCE-R1: optional, not a base dependency - app/ai/llm_provider.py's
 # AnthropicProvider imports this lazily, only when a real completion is actually attempted (never
@@ -65,6 +70,17 @@ extend-immutable-calls = [
 [tool.mypy]
 python_version = "3.12"
 strict = true
+
+# Scoped to exactly these two named third-party SDKs, not a project-wide
+# ignore_missing_imports - both are deliberately optional, lazily-imported-inside-a-method
+# dependencies (app/ai/llm_provider.py's AnthropicProvider/OpenAIProvider), matching this
+# project's own AI-PROVIDER-RESILIENCE-R1 design (see pyproject.toml's [project.optional-
+# dependencies] "ai" extra docstring): an environment that never serves real AI-copilot traffic
+# installs neither, and every other module in the codebase still gets full strict checking,
+# including untyped-import detection, unaffected.
+[[tool.mypy.overrides]]
+module = ["anthropic", "openai"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

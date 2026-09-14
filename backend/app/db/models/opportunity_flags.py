@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import DateTime, ForeignKey, Numeric, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -33,7 +34,7 @@ class DuplicateSkuFlag(Base, TenantScopedMixin):
     sku_b: Mapped[str | None] = mapped_column(String(128))
     description_b: Mapped[str] = mapped_column(String(512), nullable=False)
 
-    similarity_score: Mapped[float] = mapped_column(Numeric(5, 4), nullable=False)
+    similarity_score: Mapped[Decimal] = mapped_column(Numeric(5, 4), nullable=False)
     match_method: Mapped[str] = mapped_column(String(32), nullable=False)
 
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="flagged")
@@ -61,8 +62,8 @@ class SupplierConsolidationFlag(Base, TenantScopedMixin):
 
     description_a: Mapped[str] = mapped_column(String(512), nullable=False)
     description_b: Mapped[str] = mapped_column(String(512), nullable=False)
-    similarity_score: Mapped[float] = mapped_column(Numeric(5, 4), nullable=False)
-    combined_spend: Mapped[float | None] = mapped_column(Numeric(18, 4))
+    similarity_score: Mapped[Decimal] = mapped_column(Numeric(5, 4), nullable=False)
+    combined_spend: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
     match_method: Mapped[str] = mapped_column(String(32), nullable=False)
     # 'exact_sku' | 'exact_barcode' | 'exact_normalized_description' | 'fuzzy_description' |
     # 'unmatched' (app.matching.scorer.MatchMethod) | 'unknown' (rows predating this column -

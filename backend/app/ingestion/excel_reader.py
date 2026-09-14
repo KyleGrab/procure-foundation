@@ -10,6 +10,11 @@ def read_xlsx_rows(path: str | Path, sheet_name: str | None = None) -> list[dict
     parsing into Decimal happens in validation.py, this module just gets rows out of the file."""
     workbook = openpyxl.load_workbook(path, data_only=True, read_only=True)
     sheet = workbook[sheet_name] if sheet_name else workbook.active
+    if sheet is None:
+        # A real, if rare, edge case (openpyxl types workbook.active as Optional) - a workbook
+        # with no sheets at all. Fail loudly here with a clear message, not an opaque
+        # "NoneType has no attribute iter_rows" three frames deeper.
+        raise ValueError(f"No active worksheet found in {path!r} - the workbook has no sheets")
 
     rows_iter = sheet.iter_rows(values_only=True)
     header = [str(h).strip() if h is not None else "" for h in next(rows_iter)]

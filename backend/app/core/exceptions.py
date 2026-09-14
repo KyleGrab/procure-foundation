@@ -4,6 +4,8 @@ Never let a raw exception/stack trace reach a production response body.
 """
 from __future__ import annotations
 
+from typing import Any
+
 
 class ProcureIQError(Exception):
     """Base class. code is a stable machine-readable string, message is human-readable."""
@@ -11,7 +13,7 @@ class ProcureIQError(Exception):
     code: str = "internal_error"
     status_code: int = 500
 
-    def __init__(self, message: str, details: list[dict] | None = None) -> None:
+    def __init__(self, message: str, details: list[dict[str, Any]] | None = None) -> None:
         self.message = message
         self.details = details or []
         super().__init__(message)

@@ -14,6 +14,7 @@ out of conservation.
 from __future__ import annotations
 
 from decimal import ROUND_HALF_EVEN, Decimal
+from typing import Any
 
 from app.analytics.management_accounting import calculate_customer_net_margin
 
@@ -27,7 +28,7 @@ def round_currency(value: Decimal) -> Decimal:
 def calculate_segregated_route_cost(
     stem_distance_km: Decimal, drop_distance_km: Decimal, return_distance_km: Decimal,
     total_trip_cost_pool: Decimal,
-) -> dict:
+) -> dict[str, Any]:
     """
     Fixed Stem Cost = (stem_distance_km + return_distance_km) * cost_per_km
     Variable Drop Cost = drop_distance_km * cost_per_km
@@ -109,7 +110,7 @@ def calculate_trip_fixed_cost(
 
 def calculate_distance_variable_cost(
     stem_distance_km: Decimal, drop_distance_km: Decimal, base_rate_per_km: Decimal, stop_start_multiplier: Decimal,
-) -> dict:
+) -> dict[str, Any]:
     """
     Diesel/wear-and-tear cost built up from first principles (distance x rate), not allocated
     from an already-known total the way calculate_segregated_route_cost is - a genuinely
@@ -171,7 +172,7 @@ def calculate_drop_latency_demurrage_cost(
 def calculate_true_route_profitability(
     revenue: Decimal, cogs: Decimal, trade_spend: Decimal, revenue_basis: str,
     trip_fixed_costs: Decimal, distance_variable_costs: Decimal, activity_time_costs: Decimal,
-) -> dict:
+) -> dict[str, Any]:
     """
     Net Net Profit = Net Revenue - Realized COGS - (Trip Fixed + Distance Variable + Activity
     Time). Reuses app.analytics.management_accounting.calculate_customer_net_margin directly for

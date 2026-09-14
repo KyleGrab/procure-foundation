@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,7 +24,7 @@ async def ingest_fx_transaction(
     currency_code: str, foreign_currency_amount: Decimal, transaction_date_spot_rate: Decimal,
     reporting_date_spot_rate: Decimal, fec_contract_rate: Decimal | None = None,
     supplier_id: int | None = None, customer_id: str | None = None, corrects_id: int | None = None,
-) -> dict:
+) -> dict[str, Any]:
     """
     Calls calculate_fx_transaction_exposure (raises ValueError/TypeError on any invalid or
     missing input - never reaches this function's DB write on bad data) and persists the

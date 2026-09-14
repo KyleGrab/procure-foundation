@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from enum import Enum
+from typing import Any
 
 
 class IssueSeverity(str, Enum):
@@ -99,7 +100,7 @@ def summarize_issues(validated_rows: list[ValidatedRow]) -> dict[str, int]:
     return {"total_rows": len(validated_rows), "valid_rows": valid_rows, "errors": errors, "warnings": warnings}
 
 
-def serialize_validation_issues(issues: list[ValidationIssue]) -> list[dict]:
+def serialize_validation_issues(issues: list[ValidationIssue]) -> list[dict[str, Any]]:
     """
     Turns ValidationIssue objects into the list[dict] shape ProcureIQError.details expects (see
     app/core/exceptions.py) - one place this happens, reused by any route returning a 422 with

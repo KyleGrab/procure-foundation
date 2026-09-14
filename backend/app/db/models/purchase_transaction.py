@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date
+from decimal import Decimal
 
 from sqlalchemy import Date, ForeignKey, Numeric, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -37,8 +38,8 @@ class PurchaseTransaction(Base, TenantScopedMixin):
     supplier_sku: Mapped[str | None] = mapped_column(String(128))
     description: Mapped[str | None] = mapped_column(String(512))
     transaction_date: Mapped[date] = mapped_column(Date, nullable=False)
-    amount: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
-    quantity: Mapped[float | None] = mapped_column(Numeric(18, 4))
+    amount: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    quantity: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
     reference: Mapped[str | None] = mapped_column(String(128))
 
     corrects_id: Mapped[int | None] = mapped_column(ForeignKey("purchase_transactions.id"))

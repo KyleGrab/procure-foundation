@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -74,7 +75,7 @@ class EscalatedPriceRequest(BaseModel):
 
 class ContractExtractionRead(BaseModel):
     public_id_placeholder: str | None = None  # ContractExtraction has no public_id (internal staging only)
-    extracted_fields: dict
+    extracted_fields: dict[str, Any]
     extraction_model: str | None
     verification_status: str
     verified_at: datetime | None

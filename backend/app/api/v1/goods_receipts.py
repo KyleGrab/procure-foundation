@@ -1,6 +1,8 @@
 """Goods receipt routes (Phase 4c, append-only)."""
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,7 +21,7 @@ async def record_goods_receipt(
     payload: GoodsReceiptCreate,
     claims: AccessTokenClaims = Depends(require_permission(Permission.UPLOAD_DATA)),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> dict[str, Any]:
     receipt, variance_results = await purchase_ledger_service.record_goods_receipt(
         db, organisation_id=claims.active_org_id, user_id=claims.user_id, payload=payload
     )

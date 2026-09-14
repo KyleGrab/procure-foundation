@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Numeric, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -65,7 +66,7 @@ class RebateAgreement(Base, TenantScopedMixin):
     period_type: Mapped[str] = mapped_column(String(16), nullable=False, default="quarterly")
 
     flat_rate_pct: Mapped[Decimal | None] = mapped_column(Numeric(9, 6))
-    bands: Mapped[list | None] = mapped_column(JSONB)
+    bands: Mapped[list[Any] | None] = mapped_column(JSONB)
     fixed_amount: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="ZAR")
 

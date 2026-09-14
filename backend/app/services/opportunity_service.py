@@ -21,9 +21,10 @@ _WATERFALL_ORDER = ("identified", "validated", "approved", "implementation", "re
 
 
 async def _write_opportunity_measure_event(
-    db: AsyncSession, *, opportunity: Opportunity, measure_code: str, new_amount, new_status: str,
-    new_source_basis: str | None, new_calculated_at=None, new_approved_at=None, new_approved_by_user_id=None,
-    new_effective_period_start=None, new_effective_period_end=None,
+    db: AsyncSession, *, opportunity: Opportunity, measure_code: str, new_amount: Decimal | None, new_status: str,
+    new_source_basis: str | None, new_calculated_at: datetime | None = None,
+    new_approved_at: datetime | None = None, new_approved_by_user_id: int | None = None,
+    new_effective_period_start: date | None = None, new_effective_period_end: date | None = None,
     actor_user_id: int | None, change_reference: str, change_reason_code: str,
 ) -> FinancialAmountStatusEvent:
     """

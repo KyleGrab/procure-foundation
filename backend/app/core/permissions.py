@@ -6,6 +6,8 @@ body after the fact.
 """
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from fastapi import Depends
 
 from app.core.constants import ROLE_PERMISSIONS, Permission, Role
@@ -14,7 +16,7 @@ from app.core.security import AccessTokenClaims
 from app.db.session import get_current_claims
 
 
-def require_permission(permission: Permission):
+def require_permission(permission: Permission) -> Callable[..., AccessTokenClaims]:
     def _check(claims: AccessTokenClaims = Depends(get_current_claims)) -> AccessTokenClaims:
         role = Role(claims.role)
         if permission not in ROLE_PERMISSIONS.get(role, frozenset()):

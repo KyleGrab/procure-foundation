@@ -23,6 +23,7 @@ import asyncio
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
@@ -43,7 +44,7 @@ from app.db.seeds.management_accounting_demo import (
 DEMO_LOGIN_EMAIL = "demo-login@procureiq-demo.example"
 
 
-async def seed_demo_hardened(db: AsyncSession) -> dict:
+async def seed_demo_hardened(db: AsyncSession) -> dict[str, Any]:
     demo_user_password = os.environ.get("DEMO_USER_PASSWORD")
     if not demo_user_password:
         raise RuntimeError(

@@ -16,6 +16,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import Enum
+from typing import Any
 
 from app.core.exceptions import ProcureIQError
 
@@ -103,7 +104,7 @@ class GraphNode:
     label: str         # supplier.name
     node_type: str      # 'supplier'
     source: str          # which table produced this node - 'suppliers'
-    metadata: dict
+    metadata: dict[str, Any]
 
 
 @dataclass(frozen=True)

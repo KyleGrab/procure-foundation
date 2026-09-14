@@ -8,11 +8,12 @@ variable), RBAC via require_permission - same pattern as every other route in th
 from __future__ import annotations
 
 from datetime import date
-from typing import Literal
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.analytics.canvas_lens import CanvasGraph
 from app.core.constants import Permission
 from app.core.exceptions import ValidationFailedError
 from app.core.permissions import require_permission
@@ -23,7 +24,7 @@ from app.services import canvas_service
 router = APIRouter(prefix="/canvas", tags=["canvas"])
 
 
-def _serialize_graph(graph) -> dict:
+def _serialize_graph(graph: CanvasGraph) -> dict[str, Any]:
     return {
         "nodes": [
             {
@@ -52,7 +53,7 @@ async def get_canvas_nodes(
     claims: AccessTokenClaims = Depends(require_permission(Permission.VIEW_FINANCIALS)),
     db: AsyncSession = Depends(get_db),
     as_of_date: date = Depends(get_organisation_business_date),
-) -> dict:
+) -> dict[str, Any]:
     if lens == "procurement":
         graph = await canvas_service.build_procurement_lens(db, organisation_id=claims.active_org_id)
     elif lens == "operations":

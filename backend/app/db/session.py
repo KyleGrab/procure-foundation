@@ -42,9 +42,10 @@ from datetime import date
 
 from fastapi import Depends, Header
 from sqlalchemy import event, select, text
+from sqlalchemy.engine import Connection
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, SessionTransaction
 
 from app.core.business_calendar import resolve_business_date
 from app.core.config import get_settings
@@ -68,7 +69,7 @@ class _TenantScopedSession(Session):
 
 
 @event.listens_for(_TenantScopedSession, "after_begin")
-def _apply_tenant_context(session: Session, transaction, connection) -> None:
+def _apply_tenant_context(session: Session, transaction: SessionTransaction, connection: Connection) -> None:
     """Fires at the start of every transaction this session opens (the first one, and every one
     after a commit or rollback - not just once at session creation). Reads the org id the request
     validated up front (get_db) and stashed on `session.info` - never a module-global, never

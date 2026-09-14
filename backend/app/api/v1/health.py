@@ -1,15 +1,17 @@
+from typing import Any
+
 from fastapi import APIRouter
 
 router = APIRouter(tags=["health"])
 
 
 @router.get("/health")
-async def health() -> dict:
+async def health() -> dict[str, Any]:
     return {"status": "ok"}
 
 
 @router.get("/health/ready")
-async def ready() -> dict:
+async def ready() -> dict[str, Any]:
     # Phase 1: liveness only. Phase 2+ adds a real DB/Redis ping here once there's a dependency
     # worth reporting on beyond "the process is running."
     return {"status": "ready"}

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 
 from sqlalchemy import (
     Boolean,
@@ -62,12 +63,12 @@ class InventoryReconciliation(Base, TenantScopedMixin):
     snapshot_date: Mapped[date] = mapped_column(Date, nullable=False)
     valuation_basis: Mapped[str] = mapped_column(String(32), nullable=False, default="moving_average_cost")
 
-    raw_subledger_total: Mapped[float | None] = mapped_column(Numeric(18, 4))
-    gl_control_total: Mapped[float | None] = mapped_column(Numeric(18, 4))
-    bridge_total: Mapped[float | None] = mapped_column(Numeric(18, 4))
-    reconciled_total: Mapped[float | None] = mapped_column(Numeric(18, 4))
-    final_variance: Mapped[float | None] = mapped_column(Numeric(18, 4))
-    tolerance: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False, default=0.01)
+    raw_subledger_total: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
+    gl_control_total: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
+    bridge_total: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
+    reconciled_total: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
+    final_variance: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
+    tolerance: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False, default=Decimal("0.01"))
 
     raw_detail_row_count: Mapped[int | None] = mapped_column(Integer)
     bridge_row_count: Mapped[int | None] = mapped_column(Integer)
@@ -106,7 +107,7 @@ class InventoryReconciliationBridge(Base, TenantScopedMixin):
 
     reconciliation_id: Mapped[int] = mapped_column(ForeignKey("inventory_reconciliations.id"), nullable=False)
     reference_code: Mapped[str] = mapped_column(String(64), nullable=False)
-    amount: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
     reason_code: Mapped[str] = mapped_column(String(64), nullable=False, default="GL_SUBLEDGER_TIMING_VARIANCE")
     allocation_scope: Mapped[str] = mapped_column(String(32), nullable=False, default="organisation_unallocated")
     evidence_checksum: Mapped[str | None] = mapped_column(String(128))

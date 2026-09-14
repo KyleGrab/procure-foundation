@@ -19,6 +19,7 @@ import csv
 import io
 import uuid
 from datetime import date
+from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from openpyxl import load_workbook
@@ -44,11 +45,13 @@ router = APIRouter(prefix="/inventory", tags=["inventory"])
 _REQUIRED_FIELDS = ("supplier_sku", "quantity_on_hand", "unit_cost")
 
 
-def _parse_upload_to_rows(filename: str, content: bytes) -> list[dict]:
+def _parse_upload_to_rows(filename: str, content: bytes) -> list[dict[str, Any]]:
     lower = (filename or "").lower()
     if lower.endswith(".xlsx"):
         workbook = load_workbook(io.BytesIO(content), data_only=True)
         worksheet = workbook.active
+        if worksheet is None:
+            raise ValidationFailedError(f"{filename!r} has no active worksheet - the workbook has no sheets")
         rows_iter = worksheet.iter_rows(values_only=True)
         try:
             header_row = next(rows_iter)
@@ -74,7 +77,7 @@ async def upload_inventory_valuation(
     file: UploadFile = File(...),
     claims: AccessTokenClaims = Depends(require_permission(Permission.UPLOAD_DATA)),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> dict[str, Any]:
     # Resolve the PUBLIC location_id (what the client sends) to the internal integer id the
     # service layer needs - never trust a client-supplied primary key directly (§1), same
     # pattern as every other route resolving a public_id, scoped to claims.active_org_id so a
@@ -89,6 +92,8 @@ async def upload_inventory_valuation(
     if internal_location_id is None:
         raise NotFoundError(f"Location {location_id} not found")
 
+    if file.filename is None:
+        raise ValidationFailedError("Uploaded file has no filename - cannot determine .xlsx or .csv")
     content = await file.read()
     raw_rows = _parse_upload_to_rows(file.filename, content)
     if not raw_rows:

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
@@ -95,8 +96,11 @@ async def list_opportunities(
     supplier_public_ids: dict[int, uuid.UUID] = {}
     if supplier_ids:
         result = await db.execute(select(Supplier.id, Supplier.public_id).where(Supplier.id.in_(supplier_ids)))
-        supplier_public_ids = dict(result.all())
-    return [_to_read_model(o, supplier_public_ids.get(o.supplier_id)) for o in opportunities]
+        supplier_public_ids = {row.id: row.public_id for row in result.all()}
+    return [
+        _to_read_model(o, supplier_public_ids.get(o.supplier_id) if o.supplier_id is not None else None)
+        for o in opportunities
+    ]
 
 
 @router.post("/{opportunity_public_id}/advance", response_model=OpportunityRead)
@@ -139,7 +143,7 @@ async def scan_duplicate_skus(
     supplier_public_id: str,
     claims: AccessTokenClaims = Depends(require_permission(Permission.EDIT_SUPPLIERS)),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> dict[str, Any]:
     """spec §107. Reuses Phase 2's matching engine (app.matching.scorer) - never auto-merges,
     only flags for human review (see app.services.duplicate_detection_service)."""
     result = await db.execute(select(Supplier.id).where(Supplier.public_id == supplier_public_id))
@@ -157,7 +161,7 @@ async def list_duplicate_sku_flags(
     status: str | None = None,
     claims: AccessTokenClaims = Depends(require_permission(Permission.VIEW_FINANCIALS)),
     db: AsyncSession = Depends(get_db),
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     query = select(DuplicateSkuFlag)
     if status:
         query = query.where(DuplicateSkuFlag.status == status)
@@ -174,7 +178,7 @@ async def list_duplicate_sku_flags(
 async def scan_supplier_consolidation(
     claims: AccessTokenClaims = Depends(require_permission(Permission.EDIT_SUPPLIERS)),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> dict[str, Any]:
     """spec §22 - flags only, never an auto-recommendation. See
     app.services.duplicate_detection_service.scan_for_supplier_consolidation's docstring for why."""
     flags = await duplicate_detection_service.scan_for_supplier_consolidation(
@@ -188,7 +192,7 @@ async def list_consolidation_flags(
     status: str | None = None,
     claims: AccessTokenClaims = Depends(require_permission(Permission.VIEW_FINANCIALS)),
     db: AsyncSession = Depends(get_db),
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     query = select(SupplierConsolidationFlag)
     if status:
         query = query.where(SupplierConsolidationFlag.status == status)
@@ -206,7 +210,7 @@ async def review_duplicate_sku_flag_route(
     flag_public_id: str, confirmed: bool,
     claims: AccessTokenClaims = Depends(require_permission(Permission.EDIT_SUPPLIERS)),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> dict[str, Any]:
     """Wires up app.services.duplicate_detection_service.review_duplicate_sku_flag - the
     never-silently-merge human-confirmation gate. Was left unrouted when the service function was
     first written; added here rather than left as a frontend TODO, since the service logic
@@ -225,7 +229,7 @@ async def review_duplicate_sku_flag_route(
 async def get_consolidation_graph(
     claims: AccessTokenClaims = Depends(require_permission(Permission.VIEW_FINANCIALS)),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> dict[str, Any]:
     """Node-edge payload for the React Flow consolidation graph view
     (dashboard/opportunities/consolidation-graph). All orchestration in
     app.services.duplicate_detection_service.build_consolidation_graph_payload - this route does
@@ -240,7 +244,7 @@ async def review_consolidation_flag_route(
     flag_public_id: str, payload: ConsolidationFlagReviewRequest,
     claims: AccessTokenClaims = Depends(require_permission(Permission.EDIT_SUPPLIERS)),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> dict[str, Any]:
     """Same permission level and minimal-dict response shape as the duplicate-SKU flag review
     route above, for parity. InvalidConsolidationTransitionError (e.g. reviewing an already-
     terminal flag) is a ProcureIQError -> propagates as a 409 via app.main's exception handler,

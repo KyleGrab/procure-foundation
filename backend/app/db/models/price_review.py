@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -59,8 +60,8 @@ class PriceReviewFile(Base, TenantScopedMixin):
     # holds the mapped+validated rows so /match can read both files' staged data without
     # re-parsing the source file a second time - the same staging-before-use shape as
     # ContractExtraction (ADR-004), applied here to file-parsing rather than AI extraction.
-    column_mapping: Mapped[dict | None] = mapped_column(JSONB)
-    staged_rows: Mapped[list | None] = mapped_column(JSONB)
+    column_mapping: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    staged_rows: Mapped[list[Any] | None] = mapped_column(JSONB)
 
 
 class PriceReviewMappingTemplate(Base, TenantScopedMixin):
@@ -72,7 +73,7 @@ class PriceReviewMappingTemplate(Base, TenantScopedMixin):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     supplier_id: Mapped[int | None] = mapped_column(ForeignKey("suppliers.id"))
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    column_mapping: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    column_mapping: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     created_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
 
 
@@ -99,7 +100,7 @@ class PriceReviewLine(Base, TenantScopedMixin):
     old_price: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
     old_normalized_price: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
     old_normalized_base_unit: Mapped[str | None] = mapped_column(String(8))
-    old_source_row_ref: Mapped[dict | None] = mapped_column(JSONB)  # {file_id, row_number}
+    old_source_row_ref: Mapped[dict[str, Any] | None] = mapped_column(JSONB)  # {file_id, row_number}
 
     # --- new-list side ---
     new_supplier_sku: Mapped[str | None] = mapped_column(String(128))
@@ -108,7 +109,7 @@ class PriceReviewLine(Base, TenantScopedMixin):
     new_price: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
     new_normalized_price: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
     new_normalized_base_unit: Mapped[str | None] = mapped_column(String(8))
-    new_source_row_ref: Mapped[dict | None] = mapped_column(JSONB)
+    new_source_row_ref: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
     # --- matching (spec Section 8-11) ---
     match_status: Mapped[str] = mapped_column(String(32), nullable=False)  # matched|new_product|discontinued|review_required

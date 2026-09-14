@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 
 from sqlalchemy import (
     BigInteger,
@@ -105,8 +106,8 @@ class FinancialAmountStatusEvent(Base, TenantScopedMixin):
     measure_code: Mapped[str] = mapped_column(String(32), nullable=False)
     event_version: Mapped[int] = mapped_column(BigInteger, nullable=False)
 
-    old_amount: Mapped[float | None] = mapped_column(Numeric(18, 4))
-    new_amount: Mapped[float | None] = mapped_column(Numeric(18, 4))
+    old_amount: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
+    new_amount: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
     old_status: Mapped[str | None] = mapped_column(String(32))
     new_status: Mapped[str] = mapped_column(String(32), nullable=False)
     old_source_basis: Mapped[str | None] = mapped_column(String(64))

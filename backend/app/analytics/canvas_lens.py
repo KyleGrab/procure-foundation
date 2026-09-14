@@ -17,6 +17,7 @@ from datetime import date
 from decimal import Decimal
 from enum import Enum
 from itertools import pairwise
+from typing import Any
 
 
 class NodeStatus(str, Enum):
@@ -34,7 +35,7 @@ class CanvasNode:
     metric_value: Decimal
     status: NodeStatus
     trend: str | None
-    details: dict
+    details: dict[str, Any]
 
 
 @dataclass(frozen=True)
@@ -121,8 +122,8 @@ def build_procurement_lens_graph(
     ))
 
     for renewal in contract_renewals:
-        supplier = supplier_by_id.get(renewal.supplier_id)
-        if supplier is None:
+        renewal_supplier = supplier_by_id.get(renewal.supplier_id)
+        if renewal_supplier is None:
             continue  # a renewal for a supplier not in this spend snapshot - not this graph's concern
         node_id = f"contract:{renewal.contract_public_id}"
         nodes.append(CanvasNode(
@@ -132,7 +133,7 @@ def build_procurement_lens_graph(
             trend=None, details={"expiry_date": renewal.expiry_date.isoformat(), "status": renewal.status},
         ))
         edges.append(CanvasEdge(
-            id=f"{supplier.public_id}->{node_id}", source_id=supplier.public_id, target_id=node_id,
+            id=f"{renewal_supplier.public_id}->{node_id}", source_id=renewal_supplier.public_id, target_id=node_id,
             status=NodeStatus.WARNING,
         ))
 

@@ -16,8 +16,9 @@ future test call the exact same seeding logic.
 from __future__ import annotations
 
 import asyncio
+from typing import Any
 
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.security import hash_password
 from app.db.models import Organisation, OrganisationMembership, User
@@ -27,7 +28,7 @@ DEMO_EMAIL = "dev-demo@procureiq.local"
 DEMO_PASSWORD = "dev-demo-only-not-for-production"  # nosec - dev-only, real hash still applied
 
 
-async def seed_demo_credentials(db) -> dict:
+async def seed_demo_credentials(db: AsyncSession) -> dict[str, Any]:
     """
     Real user, real bcrypt-hashed password (hash_password - the same function every real
     registration uses, never a shortcut), real organisation, real "owner" membership. Returns

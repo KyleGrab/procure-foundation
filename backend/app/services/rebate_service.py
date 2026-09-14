@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,8 +39,9 @@ from app.services import audit_service
 
 
 async def _write_expected_amount_event(
-    db: AsyncSession, *, period_actual: RebatePeriodActual, new_amount, new_status: str,
-    new_source_basis: str | None, new_calculated_at, new_approved_at=None, new_approved_by_user_id=None,
+    db: AsyncSession, *, period_actual: RebatePeriodActual, new_amount: Decimal | None, new_status: str,
+    new_source_basis: str | None, new_calculated_at: datetime | None,
+    new_approved_at: datetime | None = None, new_approved_by_user_id: int | None = None,
     actor_user_id: int | None, change_reference: str, change_reason_code: str,
 ) -> None:
     """
@@ -292,7 +294,7 @@ async def close_period(
 async def record_receipt(
     db: AsyncSession, *, organisation_id: int, user_id: int,
     period_actual: RebatePeriodActual, payload: RebateReceiptRecord, as_of_date: date,
-) -> dict:
+) -> dict[str, Any]:
     """spec Section 29 + analytics-methodology.md §8: received_amount is only ever set from an
     actual reference, and setting it is what makes leakage detection (or reconciliation)
     possible - see classify_rebate_status.
@@ -346,7 +348,7 @@ def _refresh_status(period_actual: RebatePeriodActual, *, today: date, period_cl
     period_actual.status_calculated_at = datetime.now(UTC)
 
 
-def get_derived_progress(agreement: RebateAgreement, period_actual: RebatePeriodActual) -> dict:
+def get_derived_progress(agreement: RebateAgreement, period_actual: RebatePeriodActual) -> dict[str, Any]:
     bands = _bands_from_agreement(agreement)
     if bands is None or period_actual.actual_spend is None:
         return {"next_tier_threshold": None, "amount_to_next_tier": None}

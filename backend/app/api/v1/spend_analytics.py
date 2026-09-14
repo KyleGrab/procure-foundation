@@ -1,6 +1,8 @@
 """Spend analytics routes (Phase 5). Read-only, thin - logic in services/spend_analytics_service.py."""
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,7 +28,7 @@ router = APIRouter(prefix="/spend-analytics", tags=["spend-analytics"])
 async def month_over_month_trend(
     claims: AccessTokenClaims = Depends(require_permission(Permission.VIEW_FINANCIALS)),
     db: AsyncSession = Depends(get_db),
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     points = await spend_analytics_service.get_month_over_month_trend(db, organisation_id=claims.active_org_id)
     return [
         {"month": p.month_label, "amount": str(p.amount),
@@ -40,7 +42,7 @@ async def top_price_increases(
     limit: int = 10,
     claims: AccessTokenClaims = Depends(require_permission(Permission.VIEW_FINANCIALS)),
     db: AsyncSession = Depends(get_db),
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     return await spend_analytics_service.get_top_supplier_price_increases(
         db, organisation_id=claims.active_org_id, limit=limit
     )
