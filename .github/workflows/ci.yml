@@ -59,6 +59,7 @@ jobs:
       - run: pip install -e "backend[dev]"
       - run: cd backend && alembic upgrade 0020
         env:
+          DATABASE_URL: postgresql+asyncpg://procureiq:procureiq@localhost:5432/procureiq_test
           DATABASE_URL_SYNC: postgresql+psycopg://procureiq:procureiq@localhost:5432/procureiq_test
           SECRET_KEY: ci-secret-key
           DATABASE_URL_APP: postgresql+asyncpg://procureiq_app:procureiq_app_dev_only_rotate_in_production@localhost:5432/procureiq_test
