@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import os
 import sys
+import uuid
 from decimal import Decimal
 
 import psycopg
@@ -37,79 +38,113 @@ def _alembic_config() -> Config:
 def seed_0020_shaped_rows(conn: psycopg.Connection) -> dict:
     """
     Raw SQL only. Every column named below exists at revision 0020 - confirmed directly against
-    migrations 0002 (opportunities creation), 0005 (rebate_period_actuals creation), and 0009
-    (opportunities Phase 5 additions, including realised_savings) before this was written.
+    migrations 0001 (organisations/users/organisation_memberships creation), 0002 (suppliers and
+    opportunities creation), 0005 (rebate_agreements/rebate_period_actuals creation), 0009
+    (opportunities Phase 5 additions, including realised_savings), and 0016 (rebate_agreements
+    sell-side widening - supplier_id becomes nullable, but ck_rebate_agreements_supplier_or_customer
+    then requires supplier_id OR customer_id, so a minimal supplier row is seeded to satisfy it)
+    before this was written.
+
+    Every one of these seven tables defines public_id as `UUID NOT NULL UNIQUE` with no DB-level
+    server_default - confirmed against each table's own op.create_table() call, and confirmed no
+    later migration up to 0020 ever adds one. The only place a value normally comes from is the
+    ORM's own `default=uuid.uuid4` (app/db/models/*.py), which never runs for a raw SQL INSERT -
+    exactly the gap this function exists to work around. Each explicit uuid.uuid4() below is a
+    fresh, non-real, non-meaningful identifier generated purely to satisfy that NOT NULL/UNIQUE
+    constraint, the same way the ORM would have - not a real organisation, user, supplier, or
+    business identity, and never reused across rows (each needs its own unique value).
     """
     cur = conn.cursor()
 
     cur.execute(
-        "INSERT INTO organisations (name, default_currency, country) VALUES (%s, %s, %s) RETURNING id",
-        ("Migration Compat Test Org", "ZAR", "ZA"),
+        "INSERT INTO organisations (public_id, name, default_currency, country) VALUES (%s, %s, %s, %s) "
+        "RETURNING id",
+        (uuid.uuid4(), "Migration Compat Test Org", "ZAR", "ZA"),
     )
     org_id = cur.fetchone()[0]
 
     cur.execute(
-        "INSERT INTO users (first_name, last_name, email, password_hash, verified) "
-        "VALUES (%s, %s, %s, %s, %s) RETURNING id",
-        ("Migration", "Compat", "migration-compat@procureiq.local", "not-a-real-hash-test-only", True),
+        "INSERT INTO users (public_id, first_name, last_name, email, password_hash, verified) "
+        "VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
+        (uuid.uuid4(), "Migration", "Compat", "migration-compat@procureiq.local", "not-a-real-hash-test-only", True),
     )
     user_id = cur.fetchone()[0]
 
     cur.execute(
-        "INSERT INTO organisation_memberships (user_id, organisation_id, role, status) "
-        "VALUES (%s, %s, %s, %s)",
-        (user_id, org_id, "owner", "active"),
+        "INSERT INTO organisation_memberships (public_id, user_id, organisation_id, role, status) "
+        "VALUES (%s, %s, %s, %s, %s)",
+        (uuid.uuid4(), user_id, org_id, "owner", "active"),
     )
 
+    # rebate_agreements.supplier_id is nullable as of migration 0016 (sell-side widening), but
+    # ck_rebate_agreements_supplier_or_customer still requires supplier_id OR customer_id to be
+    # set. This row is a classic buy-side rebate (matching the expected_amount/earned_amount/
+    # received_amount language on the rebate_period_actuals rows below, and 0016's own
+    # direction column, which defaults to 'buy_side') - so a minimal real supplier row is the
+    # semantically correct fix here, not an arbitrary customer_id string used only to satisfy
+    # the constraint while actually modelling a sell-side row.
     cur.execute(
-        "INSERT INTO rebate_agreements (organisation_id, title, rebate_type, period_type, "
-        "flat_rate_pct, currency, created_by_user_id) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
-        (org_id, "Migration Compat Agreement", "fixed_percentage", "quarterly", "0.02", "ZAR", user_id),
+        "INSERT INTO suppliers (public_id, organisation_id, legal_name) VALUES (%s, %s, %s) RETURNING id",
+        (uuid.uuid4(), org_id, "Migration Compat Supplier"),
+    )
+    supplier_id = cur.fetchone()[0]
+
+    cur.execute(
+        "INSERT INTO rebate_agreements (public_id, organisation_id, supplier_id, title, rebate_type, "
+        "period_type, flat_rate_pct, currency, created_by_user_id) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) "
+        "RETURNING id",
+        (uuid.uuid4(), org_id, supplier_id, "Migration Compat Agreement", "fixed_percentage", "quarterly", "0.02", "ZAR", user_id),
     )
     agreement_id = cur.fetchone()[0]
 
     # expected_amount NULL - the "not yet calculated" case
     cur.execute(
-        "INSERT INTO rebate_period_actuals (organisation_id, rebate_agreement_id, period_start, "
+        "INSERT INTO rebate_period_actuals (public_id, organisation_id, rebate_agreement_id, period_start, "
         "period_end, entry_source, entered_by_user_id, expected_amount) "
-        "VALUES (%s, %s, '2026-01-01', '2026-03-31', 'manual', %s, NULL) RETURNING id",
-        (org_id, agreement_id, user_id),
+        "VALUES (%s, %s, %s, '2026-01-01', '2026-03-31', 'manual', %s, NULL) RETURNING id",
+        (uuid.uuid4(), org_id, agreement_id, user_id),
     )
     rpa_null_id = cur.fetchone()[0]
 
     # expected_amount non-NULL - the "legacy_unverified" case
     cur.execute(
-        "INSERT INTO rebate_period_actuals (organisation_id, rebate_agreement_id, period_start, "
+        "INSERT INTO rebate_period_actuals (public_id, organisation_id, rebate_agreement_id, period_start, "
         "period_end, entry_source, entered_by_user_id, expected_amount) "
-        "VALUES (%s, %s, '2026-04-01', '2026-06-30', 'manual', %s, 12345.6700) RETURNING id",
-        (org_id, agreement_id, user_id),
+        "VALUES (%s, %s, %s, '2026-04-01', '2026-06-30', 'manual', %s, 12345.6700) RETURNING id",
+        (uuid.uuid4(), org_id, agreement_id, user_id),
     )
     rpa_nonnull_id = cur.fetchone()[0]
 
     # annual_financial_impact NULL, realised_savings NULL - both-unknown baseline
     cur.execute(
-        "INSERT INTO opportunities (organisation_id, title, opportunity_type, status, "
+        "INSERT INTO opportunities (public_id, organisation_id, title, opportunity_type, status, "
         "created_by_user_id, annual_financial_impact, realised_savings) "
-        "VALUES (%s, %s, %s, %s, %s, NULL, NULL) RETURNING id",
-        (org_id, "Opp AFI Null RS Null", "price_increase_challenge", "identified", user_id),
+        "VALUES (%s, %s, %s, %s, %s, %s, NULL, NULL) RETURNING id",
+        (uuid.uuid4(), org_id, "Opp AFI Null RS Null", "price_increase_challenge", "identified", user_id),
     )
     opp_both_null_id = cur.fetchone()[0]
 
     # annual_financial_impact non-NULL, realised_savings NULL
     cur.execute(
-        "INSERT INTO opportunities (organisation_id, title, opportunity_type, status, "
+        "INSERT INTO opportunities (public_id, organisation_id, title, opportunity_type, status, "
         "created_by_user_id, annual_financial_impact, realised_savings) "
-        "VALUES (%s, %s, %s, %s, %s, 8800.0000, NULL) RETURNING id",
-        (org_id, "Opp AFI NonNull RS Null", "price_increase_challenge", "identified", user_id),
+        "VALUES (%s, %s, %s, %s, %s, %s, 8800.0000, NULL) RETURNING id",
+        (uuid.uuid4(), org_id, "Opp AFI NonNull RS Null", "price_increase_challenge", "identified", user_id),
     )
     opp_afi_nonnull_id = cur.fetchone()[0]
 
-    # annual_financial_impact NULL, realised_savings non-NULL
+    # annual_financial_impact NULL, realised_savings non-NULL - status='realised' is the genuine
+    # final _WATERFALL_ORDER stage (app/services/opportunity_service.py), set exactly when
+    # realised_savings is recorded (see advance_opportunity_stage there) - matches this row's own
+    # intent exactly. Pre-existing bug fixed in passing: this row's params tuple was previously
+    # missing an opportunity_type value entirely (4 params for 5 placeholders, before this
+    # function even seeded public_id) - "realised" was always meant as status, not
+    # opportunity_type; opportunity_type now matches the other two rows below.
     cur.execute(
-        "INSERT INTO opportunities (organisation_id, title, opportunity_type, status, "
+        "INSERT INTO opportunities (public_id, organisation_id, title, opportunity_type, status, "
         "created_by_user_id, annual_financial_impact, realised_savings) "
-        "VALUES (%s, %s, %s, %s, %s, NULL, 4400.5000) RETURNING id",
-        (org_id, "Opp AFI Null RS NonNull", "realised", user_id),
+        "VALUES (%s, %s, %s, %s, %s, %s, NULL, 4400.5000) RETURNING id",
+        (uuid.uuid4(), org_id, "Opp AFI Null RS NonNull", "price_increase_challenge", "realised", user_id),
     )
     opp_rs_nonnull_id = cur.fetchone()[0]
 
