@@ -16,7 +16,13 @@ cross-check against quantity_on_hand * unit_cost, never as a third, independentl
 from __future__ import annotations
 
 from app.ingestion.inventory_mapping import INVENTORY_SNAPSHOT_CANONICAL_FIELDS
-from app.ingestion.mapping import apply_mapping, suggest_mapping  # noqa: F401 - re-exported
+from app.ingestion.mapping import apply_mapping, suggest_mapping
+
+# apply_mapping is re-exported from here (app/api/v1/inventory.py imports it from this module,
+# not from app.ingestion.mapping directly) - __all__ is what tells mypy's --no-implicit-reexport
+# (part of strict = true) that this is deliberate, without the "import X as X" alias idiom ruff's
+# own PLC0414 rule flags as suspicious.
+__all__ = ["apply_mapping", "suggest_inventory_valuation_mapping"]
 
 INVENTORY_VALUATION_CANONICAL_FIELDS = [
     f for f in INVENTORY_SNAPSHOT_CANONICAL_FIELDS

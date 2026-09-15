@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date
+from decimal import Decimal
 
 from sqlalchemy import Boolean, CheckConstraint, Date, ForeignKey, Numeric, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -47,14 +48,14 @@ class FXTransactionSnapshot(Base, TenantScopedMixin):
     customer_id: Mapped[str | None] = mapped_column(String(128))
     currency_code: Mapped[str] = mapped_column(String(3), nullable=False)
 
-    foreign_currency_amount: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
-    transaction_date_spot_rate: Mapped[float] = mapped_column(Numeric(12, 6), nullable=False)
-    reporting_date_spot_rate: Mapped[float] = mapped_column(Numeric(12, 6), nullable=False)
-    fec_contract_rate: Mapped[float | None] = mapped_column(Numeric(12, 6))
+    foreign_currency_amount: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    transaction_date_spot_rate: Mapped[Decimal] = mapped_column(Numeric(12, 6), nullable=False)
+    reporting_date_spot_rate: Mapped[Decimal] = mapped_column(Numeric(12, 6), nullable=False)
+    fec_contract_rate: Mapped[Decimal | None] = mapped_column(Numeric(12, 6))
 
     is_hedged: Mapped[bool] = mapped_column(Boolean, nullable=False)
-    unrealized_variance: Mapped[float | None] = mapped_column(Numeric(18, 4))
-    hedging_gain_loss: Mapped[float | None] = mapped_column(Numeric(18, 4))
+    unrealized_variance: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
+    hedging_gain_loss: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
 
     corrects_id: Mapped[int | None] = mapped_column(ForeignKey("fx_transaction_snapshots.id"))
     uploaded_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)

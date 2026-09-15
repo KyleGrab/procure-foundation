@@ -14,6 +14,7 @@ drift from the real RBAC rules.
 from __future__ import annotations
 
 import json
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -40,12 +41,12 @@ async def _resolve_supplier_id(db: AsyncSession, organisation_id: int, name: str
     return result.scalars().first()
 
 
-async def _handle_spend_by_supplier(db: AsyncSession, organisation_id: int, entities: dict) -> dict:
+async def _handle_spend_by_supplier(db: AsyncSession, organisation_id: int, entities: dict[str, Any]) -> dict[str, Any]:
     items = await spend_analytics_service.get_spend_by_supplier(db, organisation_id=organisation_id)
     return {"items": [{"supplier": i.label, "amount": str(i.amount)} for i in items[:20]]}
 
 
-async def _handle_spend_by_sku(db: AsyncSession, organisation_id: int, entities: dict) -> dict:
+async def _handle_spend_by_sku(db: AsyncSession, organisation_id: int, entities: dict[str, Any]) -> dict[str, Any]:
     supplier_id = None
     if "supplier" in entities:
         supplier_id = await _resolve_supplier_id(db, organisation_id, entities["supplier"])
@@ -53,7 +54,7 @@ async def _handle_spend_by_sku(db: AsyncSession, organisation_id: int, entities:
     return {"items": [{"sku": i.label, "amount": str(i.amount)} for i in items[:20]]}
 
 
-async def _handle_abc_classification(db: AsyncSession, organisation_id: int, entities: dict) -> dict:
+async def _handle_abc_classification(db: AsyncSession, organisation_id: int, entities: dict[str, Any]) -> dict[str, Any]:
     results = await spend_analytics_service.get_abc_classification(db, organisation_id=organisation_id)
     return {
         "classification": [
@@ -64,7 +65,7 @@ async def _handle_abc_classification(db: AsyncSession, organisation_id: int, ent
     }
 
 
-async def _handle_pareto_contributors(db: AsyncSession, organisation_id: int, entities: dict) -> dict:
+async def _handle_pareto_contributors(db: AsyncSession, organisation_id: int, entities: dict[str, Any]) -> dict[str, Any]:
     result = await spend_analytics_service.get_pareto_contributors(db, organisation_id=organisation_id)
     return {
         "contributor_count": result.contributor_count, "total_item_count": result.total_item_count,
@@ -73,7 +74,7 @@ async def _handle_pareto_contributors(db: AsyncSession, organisation_id: int, en
     }
 
 
-async def _handle_price_variance_check(db: AsyncSession, organisation_id: int, entities: dict) -> dict:
+async def _handle_price_variance_check(db: AsyncSession, organisation_id: int, entities: dict[str, Any]) -> dict[str, Any]:
     if "supplier" not in entities or "sku" not in entities:
         return {"error": "Both a supplier and an item are needed to check price consistency"}
     supplier_id = await _resolve_supplier_id(db, organisation_id, entities["supplier"])
@@ -89,7 +90,7 @@ async def _handle_price_variance_check(db: AsyncSession, organisation_id: int, e
     }
 
 
-async def _handle_rebate_status(db: AsyncSession, organisation_id: int, entities: dict) -> dict:
+async def _handle_rebate_status(db: AsyncSession, organisation_id: int, entities: dict[str, Any]) -> dict[str, Any]:
     if "supplier" not in entities:
         return {"error": "A supplier name is needed to check rebate status"}
     supplier_id = await _resolve_supplier_id(db, organisation_id, entities["supplier"])
@@ -110,7 +111,7 @@ async def _handle_rebate_status(db: AsyncSession, organisation_id: int, entities
     }
 
 
-async def _handle_contract_expiry_check(db: AsyncSession, organisation_id: int, entities: dict) -> dict:
+async def _handle_contract_expiry_check(db: AsyncSession, organisation_id: int, entities: dict[str, Any]) -> dict[str, Any]:
     result = await db.execute(
         select(Contract, Supplier.legal_name)
         .join(Supplier, Supplier.id == Contract.supplier_id)
@@ -178,7 +179,7 @@ def _check_permission(role: str, required_permission: Permission) -> None:
 
 async def answer_query(
     db: AsyncSession, provider: LLMProvider, *, organisation_id: int, role: str, question: str,
-) -> dict:
+) -> dict[str, Any]:
     """The full pipeline. Raises UnsupportedIntentError (via router.resolve_classification) for
     anything outside the fixed intent set, and PermissionDeniedError if the caller's role can't
     use the classified intent - both before any handler runs."""

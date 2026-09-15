@@ -527,6 +527,30 @@ def upgrade() -> None:
     """)
 
     # ------------------------------------------------------------------
+    # Step 7b: validate the genesis events just inserted now, not at COMMIT.
+    #
+    # trg_confirmed_event_requires_evidence and trg_event_chain_integrity (Steps 3-4) are
+    # AFTER INSERT ... DEFERRABLE INITIALLY DEFERRED on financial_amount_status_events, so the
+    # Step 7 backfill inserts above leave them queued rather than fired. On a database with
+    # pre-existing rebate_period_actuals/opportunities rows, that queue is non-empty here, and
+    # Step 10 below then fails - Postgres refuses `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`
+    # on a table with pending trigger events (asyncpg.exceptions.ObjectInUseError). On an empty
+    # source (every existing test run, and every environment this migration has run in so far),
+    # Step 7 inserts zero rows, the queue is empty, and this was never observed.
+    #
+    # Naming both triggers explicitly (rather than SET CONSTRAINTS ALL IMMEDIATE) validates only
+    # this migration's own two constraint triggers and leaves every other deferred constraint in
+    # the transaction untouched. Every genesis event just inserted is event_version=1 with
+    # new_status never 'confirmed', so both triggers' real branches are no-ops here regardless -
+    # this only changes when that becomes visible (now, inside this migration, atomically
+    # rolled back on failure) instead of silently at COMMIT. It does not change the final
+    # schema, constraints, RLS policies, or any data value produced by a successful run.
+    # ------------------------------------------------------------------
+    op.execute("""
+        SET CONSTRAINTS trg_confirmed_event_requires_evidence, trg_event_chain_integrity IMMEDIATE
+    """)
+
+    # ------------------------------------------------------------------
     # Step 8: deferred parent-row snapshot-matches-current-event triggers (one per measure)
     # ------------------------------------------------------------------
     op.execute("""

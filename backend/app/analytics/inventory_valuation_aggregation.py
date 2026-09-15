@@ -10,9 +10,10 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
+from typing import Any
 
 
-def calculate_batch_asset_valuation(records: list[dict]) -> Decimal:
+def calculate_batch_asset_valuation(records: list[dict[str, Any]]) -> Decimal:
     """
     Sum of quantity_on_hand * unit_cost across every record - always recomputed from these two
     fields, never summed from a per-record total_valuation, even if one is present. total_valuation
@@ -32,14 +33,14 @@ def calculate_batch_asset_valuation(records: list[dict]) -> Decimal:
 
 def build_reconciliation_audit_context(
     *, record_count: int, total_asset_valuation: Decimal, snapshot_date: date, file_hash: str | None,
-) -> dict:
+) -> dict[str, Any]:
     """
     Shape of the context dict passed to audit_service.record()'s existing `context: dict` JSONB
     column - not a new audit_logs-shaped table. Decimal/date are stringified since JSONB has no
     native representation for either. file_hash is omitted entirely when None, not stored as a
     JSON null, so a caller checking `"file_hash" in context` gets a clean answer either way.
     """
-    context: dict = {
+    context: dict[str, Any] = {
         "record_count": record_count,
         "total_asset_valuation": str(total_asset_valuation),
         "snapshot_date": snapshot_date.isoformat(),

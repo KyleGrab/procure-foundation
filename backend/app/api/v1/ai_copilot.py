@@ -7,6 +7,8 @@ LLM_API_KEY - same constraint as every AI-touching route since Phase 2.
 """
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -55,7 +57,7 @@ async def generate_general_negotiation_brief(
     supplier_public_id: str,
     claims: AccessTokenClaims = Depends(require_permission(Permission.ACCESS_AI)),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> dict[str, Any]:
     """ADR-016: the general-purpose sibling of /price-reviews/{id}/negotiation-brief - same
     generator, sourced from spend analytics + contracts instead of a price review."""
     result = await db.execute(select(Supplier).where(Supplier.public_id == supplier_public_id))

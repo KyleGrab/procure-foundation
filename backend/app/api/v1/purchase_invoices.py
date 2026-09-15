@@ -1,6 +1,8 @@
 """Purchase invoice ingestion routes (Phase 4c, append-only per ADR-006)."""
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,7 +21,7 @@ async def ingest_purchase_invoice(
     payload: PurchaseInvoiceIngest,
     claims: AccessTokenClaims = Depends(require_permission(Permission.UPLOAD_DATA)),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> dict[str, Any]:
     """
     Append-only - there is no PATCH/PUT route for a posted invoice, on purpose (ADR-006). A wrong
     invoice needs a correction endpoint referencing corrects_id - not built in this delivery

@@ -13,11 +13,12 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal, InvalidOperation
+from typing import Any
 
 from app.ingestion.validation import IssueSeverity, ValidationIssue
 
 
-def validate_working_capital_row(row: dict[str, str | None]) -> dict:
+def validate_working_capital_row(row: dict[str, str | None]) -> dict[str, Any]:
     """One row per period, not a batch - returns {'is_valid', 'issues'} directly, not a list."""
     issues: list[ValidationIssue] = []
 

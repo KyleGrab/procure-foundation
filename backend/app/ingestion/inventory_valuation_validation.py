@@ -15,6 +15,7 @@ pre-computed total column is slightly off).
 from __future__ import annotations
 
 from decimal import Decimal, InvalidOperation
+from typing import Any
 
 from app.ingestion.validation import IssueSeverity, ValidationIssue
 
@@ -25,7 +26,7 @@ def _strip_currency(raw: str) -> str:
     return raw.replace("R", "").replace("$", "").replace(",", "").strip()
 
 
-def validate_inventory_valuation_rows(rows: list[dict[str, str | None]]) -> list[dict]:
+def validate_inventory_valuation_rows(rows: list[dict[str, str | None]]) -> list[dict[str, Any]]:
     results = []
 
     for idx, row in enumerate(rows, start=1):

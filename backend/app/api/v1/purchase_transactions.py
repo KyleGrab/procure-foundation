@@ -4,6 +4,7 @@ app.ingestion.* per docs/decisions/ADR-013."""
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, Depends, UploadFile
 from sqlalchemy import select
@@ -30,7 +31,7 @@ async def upload_purchase_transactions(
     supplier_public_id: str, file: UploadFile,
     claims: AccessTokenClaims = Depends(require_permission(Permission.UPLOAD_DATA)),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> dict[str, Any]:
     """
     Reads the file, suggests a mapping (spec Section 3's confirm-before-processing rule still
     applies - suggested_mapping is not auto-applied; a follow-up confirm step mirroring

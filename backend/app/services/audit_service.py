@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -48,7 +49,7 @@ async def record(
     action: str,
     entity_type: str,
     entity_id: _SupportedEntityId | None = None,
-    context: dict | None = None,
+    context: dict[str, Any] | None = None,
     ip_address: str | None = None,
 ) -> None:
     """

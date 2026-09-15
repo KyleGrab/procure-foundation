@@ -8,6 +8,9 @@ purchase_transaction_service.py uses, via app.services.rebate_aggregation_servic
 """
 from __future__ import annotations
 
+import uuid
+from typing import Any
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,7 +36,7 @@ from app.schemas.purchase_order import PurchaseOrderCreate
 from app.services import audit_service, rebate_aggregation_service
 
 
-async def _get_supplier_id(db: AsyncSession, supplier_public_id) -> int:
+async def _get_supplier_id(db: AsyncSession, supplier_public_id: uuid.UUID) -> int:
     result = await db.execute(select(Supplier.id).where(Supplier.public_id == supplier_public_id))
     supplier_id = result.scalar_one_or_none()
     if supplier_id is None:
@@ -81,7 +84,7 @@ async def create_purchase_order(
 
 async def ingest_purchase_invoice(
     db: AsyncSession, *, organisation_id: int, user_id: int, payload: PurchaseInvoiceIngest,
-) -> tuple[PurchaseInvoice, list[dict]]:
+) -> tuple[PurchaseInvoice, list[dict[str, Any]]]:
     """
     Append-only (ADR-006) - there is no update path for a posted invoice. Returns the invoice
     plus a list of per-line PPV results (dicts, not persisted as their own column - PPV is
@@ -105,7 +108,7 @@ async def ingest_purchase_invoice(
     db.add(invoice)
     await db.flush()
 
-    ppv_results: list[dict] = []
+    ppv_results: list[dict[str, Any]] = []
     for line_input in payload.lines:
         net_amount = calculate_invoice_line_net_amount(
             line_input.quantity, line_input.unit_price, line_input.discount_pct
@@ -147,7 +150,7 @@ async def ingest_purchase_invoice(
 
 async def record_goods_receipt(
     db: AsyncSession, *, organisation_id: int, user_id: int, payload: GoodsReceiptCreate,
-) -> tuple[GoodsReceipt, list[dict]]:
+) -> tuple[GoodsReceipt, list[dict[str, Any]]]:
     """Append-only. Returns the receipt plus per-line variance results (computed, not stored as
     a separate persisted figure - same reasoning as PPV above)."""
     supplier_id = await _get_supplier_id(db, payload.supplier_public_id)
@@ -166,7 +169,7 @@ async def record_goods_receipt(
     db.add(receipt)
     await db.flush()
 
-    variance_results: list[dict] = []
+    variance_results: list[dict[str, Any]] = []
     for line_input in payload.lines:
         db.add(GoodsReceiptLine(
             organisation_id=organisation_id, goods_receipt_id=receipt.id,

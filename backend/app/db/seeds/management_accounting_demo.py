@@ -43,6 +43,7 @@ import sys
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
+from typing import Any, TypedDict
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
@@ -75,7 +76,25 @@ DEMO_EMAIL = "demo@management-accounting.procureiq.example"
 DEMO_PASSWORD = "demo-password-change-me"
 
 
-async def seed_management_accounting_demo(db: AsyncSession) -> dict:
+class _LedgerRowInput(TypedDict):
+    """One row's worth of the cost-to-serve ledger inputs below (real or illustrative) - a plain
+    dict literal previously left mypy to infer `dict[str, object]` for the money fields (a
+    heterogeneous-looking literal mixing str ids with Decimal amounts), which then failed every
+    downstream `calculate_customer_net_margin(...)` call and `ledger_totals[...] += row[...]`
+    accumulation with a Decimal-vs-object mismatch. This is the actual, correct shape - every
+    amount field genuinely is a Decimal at runtime, never a float - not a workaround."""
+
+    invoice_id: str
+    customer_id: str
+    allocation_level: str
+    source: str
+    revenue: Decimal
+    cogs: Decimal
+    direct_logistics_cost: Decimal
+    warehouse_abc_cost: Decimal
+
+
+async def seed_management_accounting_demo(db: AsyncSession) -> dict[str, Any]:
     organisation = Organisation(name=DEMO_ORG_NAME, default_currency="ZAR", country="ZA")
     db.add(organisation)
     await db.flush()
@@ -123,7 +142,7 @@ async def seed_management_accounting_demo(db: AsyncSession) -> dict:
 
     # Rows 2-3: illustrative (Level 1 direct, Level 2 activity_rate) - clean, hand-verifiable
     # numbers, not sourced from any uploaded file (see module docstring).
-    ledger_rows_input = [
+    ledger_rows_input: list[_LedgerRowInput] = [
         {
             "invoice_id": "GOURMET-WESTCOAST-15110", "customer_id": "ROUTE-WEST-COAST",
             "allocation_level": "volumetric", "source": "real",

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 
 from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Numeric, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -110,8 +111,8 @@ class Opportunity(Base, TenantScopedMixin):
     price_review_line_id: Mapped[int | None] = mapped_column(ForeignKey("price_review_lines.id"))
 
     description: Mapped[str | None] = mapped_column(String(2048))
-    requested_increase_pct: Mapped[float | None] = mapped_column(Numeric(9, 6))
-    annual_financial_impact: Mapped[float | None] = mapped_column(Numeric(18, 4))
+    requested_increase_pct: Mapped[Decimal | None] = mapped_column(Numeric(9, 6))
+    annual_financial_impact: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
     annual_financial_impact_status: Mapped[str] = mapped_column(String(32), nullable=False, default="unknown")
     annual_financial_impact_source_basis: Mapped[str | None] = mapped_column(String(64))
     annual_financial_impact_calculated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -119,15 +120,15 @@ class Opportunity(Base, TenantScopedMixin):
     annual_financial_impact_current_event_id: Mapped[int | None] = mapped_column(
         ForeignKey("financial_amount_status_events.id")
     )
-    negotiation_target_price: Mapped[float | None] = mapped_column(Numeric(18, 4))
-    potential_cost_avoidance: Mapped[float | None] = mapped_column(Numeric(18, 4))
+    negotiation_target_price: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
+    potential_cost_avoidance: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
 
     # --- Phase 5 additions: the five-type discipline as a real column, not an implied one ---
     savings_type: Mapped[str | None] = mapped_column(String(32))  # SavingsType values - see savings_register.py
-    baseline_value: Mapped[float | None] = mapped_column(Numeric(18, 4))
+    baseline_value: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
     baseline_methodology: Mapped[str | None] = mapped_column(String(32))  # BaselineMethodology values
     confidence: Mapped[str | None] = mapped_column(String(16))  # 'low' | 'medium' | 'high'
-    realised_savings: Mapped[float | None] = mapped_column(Numeric(18, 4))
+    realised_savings: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
     realised_savings_status: Mapped[str] = mapped_column(String(32), nullable=False, default="unknown")
     realised_savings_source_basis: Mapped[str | None] = mapped_column(String(64))
     realised_savings_calculated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

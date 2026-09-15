@@ -19,6 +19,7 @@ mutually exclusive by construction here, not just by convention.
 from __future__ import annotations
 
 from decimal import ROUND_HALF_EVEN, Decimal
+from typing import Any
 
 CURRENCY_QUANTIZE = Decimal("0.0001")
 
@@ -30,7 +31,7 @@ def round_currency(value: Decimal) -> Decimal:
 def calculate_fx_transaction_exposure(
     foreign_currency_amount: Decimal, transaction_date_spot_rate: Decimal, reporting_date_spot_rate: Decimal,
     fec_contract_rate: Decimal | None = None,
-) -> dict:
+) -> dict[str, Any]:
     """
     Unhedged (fec_contract_rate is None):
         unrealized_variance = (reporting_date_spot_rate - transaction_date_spot_rate) * foreign_currency_amount

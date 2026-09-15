@@ -2,13 +2,15 @@
 in services/contract_service.py per docs/architecture.md's rule."""
 from __future__ import annotations
 
+import uuid
 from datetime import date
+from typing import Any
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.constants import Permission
+from app.core.constants import Currency, Permission
 from app.core.exceptions import NotFoundError
 from app.core.permissions import require_permission
 from app.core.security import AccessTokenClaims
@@ -25,7 +27,7 @@ from app.services import contract_service
 router = APIRouter(prefix="/contracts", tags=["contracts"])
 
 
-def _to_read_model(contract: Contract, supplier_public_id) -> ContractRead:
+def _to_read_model(contract: Contract, supplier_public_id: uuid.UUID) -> ContractRead:
     derived = contract_service.get_derived_fields(contract)
     return ContractRead(
         public_id=contract.public_id, supplier_public_id=supplier_public_id,
@@ -33,7 +35,7 @@ def _to_read_model(contract: Contract, supplier_public_id) -> ContractRead:
         start_date=contract.start_date, expiry_date=contract.expiry_date,
         notice_period_days=contract.notice_period_days, notice_deadline=derived["notice_deadline"],
         auto_renew=contract.auto_renew, renewal_term_months=contract.renewal_term_months,
-        next_renewal_date=derived["next_renewal_date"], currency=contract.currency,
+        next_renewal_date=derived["next_renewal_date"], currency=Currency(contract.currency),
         escalation_type=contract.escalation_type, escalation_rate_pct=contract.escalation_rate_pct,
         status=contract.status, status_calculated_at=contract.status_calculated_at,
     )
@@ -101,7 +103,7 @@ async def calculate_escalated_price_endpoint(
     contract_public_id: str, payload: EscalatedPriceRequest,
     claims: AccessTokenClaims = Depends(require_permission(Permission.VIEW_FINANCIALS)),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> dict[str, Any]:
     contract = await _get_contract(db, contract_public_id)
     escalated = await contract_service.calculate_escalated_price_for_contract(
         db, contract=contract, base_price=payload.base_price,
@@ -117,7 +119,7 @@ async def check_contract_alerts(
     claims: AccessTokenClaims = Depends(require_permission(Permission.VIEW_CONTRACTS)),
     db: AsyncSession = Depends(get_db),
     as_of_date: date = Depends(get_organisation_business_date),
-) -> dict:
+) -> dict[str, Any]:
     """Manual trigger in this delivery - a scheduled daily job (Phase 9) is what should call this
     in production, not a user clicking a button. See app.services.contract_service.run_alert_check."""
     contract = await _get_contract(db, contract_public_id)

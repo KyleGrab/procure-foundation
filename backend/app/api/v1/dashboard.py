@@ -3,6 +3,8 @@ all scoped by RLS via get_db - no mocked/fabricated fields. No 'risk score' here
 codebase computes supplier risk as a concept, so it isn't pretended into existence for a UI slot."""
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,7 +23,7 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 async def get_executive_metrics(
     claims: AccessTokenClaims = Depends(require_permission(Permission.VIEW_FINANCIALS)),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> dict[str, Any]:
     active_contracts = await db.execute(
         select(func.count()).select_from(Contract)
         .where(Contract.organisation_id == claims.active_org_id)

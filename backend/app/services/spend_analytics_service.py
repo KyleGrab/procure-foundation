@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analytics.spend_analytics import (
     ABCResult,
+    MonthOverMonthPoint,
     ParetoResult,
     PriceConsistencyResult,
     PriceObservation,
@@ -149,7 +150,7 @@ async def check_price_consistency(
     return calculate_price_consistency(observations)
 
 
-async def get_month_over_month_trend(db: AsyncSession, *, organisation_id: int):
+async def get_month_over_month_trend(db: AsyncSession, *, organisation_id: int) -> list[MonthOverMonthPoint]:
     """
     Buckets invoice-line spend by calendar month (invoice_date), including only suppliers not
     covered by purchase_transactions duplication risk in the same way get_spend_by_supplier
@@ -185,7 +186,9 @@ async def get_month_over_month_trend(db: AsyncSession, *, organisation_id: int):
     return calculate_month_over_month_trend(sorted_months)
 
 
-async def get_top_supplier_price_increases(db: AsyncSession, *, organisation_id: int, limit: int = 10):
+async def get_top_supplier_price_increases(
+    db: AsyncSession, *, organisation_id: int, limit: int = 10
+) -> list[dict[str, str | None]]:
     """
     Reuses Phase 2's PriceReviewLine data (already computed, already proven -
     tests_pure/test_calculations.py) rather than recomputing anything - "top supplier price

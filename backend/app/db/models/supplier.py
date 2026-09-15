@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import Boolean, DateTime, Integer, Numeric, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -26,7 +27,7 @@ class Supplier(Base, TenantScopedMixin):
 
     payment_terms_days: Mapped[int | None] = mapped_column(Integer)
     lead_time_days: Mapped[int | None] = mapped_column(Integer)
-    minimum_order_value: Mapped[float | None] = mapped_column(Numeric(18, 4))
+    minimum_order_value: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="ZAR")
     category: Mapped[str | None] = mapped_column(String(128))
     account_manager: Mapped[str | None] = mapped_column(String(255))

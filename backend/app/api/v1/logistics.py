@@ -14,6 +14,7 @@ from __future__ import annotations
 import uuid
 from datetime import date
 from decimal import Decimal
+from typing import Any
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -79,7 +80,7 @@ async def create_route_profitability(
     payload: RouteProfitabilityRequest,
     claims: AccessTokenClaims = Depends(require_permission(Permission.UPLOAD_DATA)),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> dict[str, Any]:
     # F-03 (fail-closed, foundation hardening): auth (require_permission) and tenant context
     # (get_db's own SET_config('app.current_org_id', ...)) are already fully resolved by this
     # point via FastAPI's Depends chain, before this function body ever runs - so this is the

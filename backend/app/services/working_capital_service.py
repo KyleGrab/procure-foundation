@@ -23,6 +23,7 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -47,7 +48,7 @@ _VALID_LEDGER_TYPES = ("debtors", "creditors")
 _DAYS_METRIC_STORAGE_MAX_ABS = Decimal("99999999.9")
 
 
-def _apply_days_metric_storage_boundary(metrics: dict) -> tuple[dict, list[str]]:
+def _apply_days_metric_storage_boundary(metrics: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
     """metrics is calculate_working_capital_metrics' own, unmodified return dict - this function
     only decides what is safe to persist; it never changes the arithmetic itself, never caps or
     rounds a value into range, and never converts an unknown/unrepresentable result to zero.
@@ -154,7 +155,7 @@ async def ingest_working_capital_snapshot(
 
 async def ingest_aging_snapshot(
     db: AsyncSession, *, organisation_id: int, user_id: int, as_of_date: date, ledger_type: str,
-    invoices: list[dict], is_correction: bool = False,
+    invoices: list[dict[str, Any]], is_correction: bool = False,
 ) -> AgingLedgerSnapshot:
     if ledger_type not in _VALID_LEDGER_TYPES:
         raise ValidationFailedError(f"Unrecognized ledger_type: {ledger_type!r} - expected 'debtors' or 'creditors'")

@@ -1,17 +1,19 @@
 """Purchase order routes (Phase 4c). Thin - logic in services/purchase_ledger_service.py."""
 from __future__ import annotations
 
+import uuid
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.constants import Permission
+from app.core.constants import Currency, Permission
 from app.core.exceptions import NotFoundError
 from app.core.permissions import require_permission
 from app.core.security import AccessTokenClaims
 from app.db.models import PurchaseOrder, PurchaseOrderLine, Supplier
 from app.db.session import get_db
-from app.schemas.purchase_order import PurchaseOrderCreate, PurchaseOrderRead
+from app.schemas.purchase_order import PurchaseOrderCreate, PurchaseOrderLineRead, PurchaseOrderRead
 from app.services import purchase_ledger_service
 
 router = APIRouter(prefix="/purchase-orders", tags=["purchase-orders"])
@@ -43,17 +45,19 @@ async def get_purchase_order(
     return await _to_read_model(db, order, supplier_result.scalar_one())
 
 
-async def _to_read_model(db: AsyncSession, order: PurchaseOrder, supplier_public_id) -> PurchaseOrderRead:
+async def _to_read_model(db: AsyncSession, order: PurchaseOrder, supplier_public_id: uuid.UUID) -> PurchaseOrderRead:
     lines_result = await db.execute(
         select(PurchaseOrderLine).where(PurchaseOrderLine.purchase_order_id == order.id)
     )
     return PurchaseOrderRead(
         public_id=order.public_id, supplier_public_id=supplier_public_id, po_number=order.po_number,
         order_date=order.order_date, expected_delivery_date=order.expected_delivery_date,
-        status=order.status, currency=order.currency,
+        status=order.status, currency=Currency(order.currency),
         lines=[
-            {"public_id": l.public_id, "supplier_sku": l.supplier_sku, "description": l.description,
-             "quantity_ordered": l.quantity_ordered, "unit_price": l.unit_price, "line_total": l.line_total}
+            PurchaseOrderLineRead(
+                public_id=l.public_id, supplier_sku=l.supplier_sku, description=l.description,
+                quantity_ordered=l.quantity_ordered, unit_price=l.unit_price, line_total=l.line_total,
+            )
             for l in lines_result.scalars().all()
         ],
     )

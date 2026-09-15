@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date
+from decimal import Decimal
 
 from sqlalchemy import Date, ForeignKey, Numeric, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -42,9 +43,9 @@ class InventorySnapshot(Base, TenantScopedMixin):
     description: Mapped[str] = mapped_column(String(512), nullable=False)
     snapshot_date: Mapped[date] = mapped_column(Date, nullable=False)
 
-    quantity_on_hand: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
-    unit_cost: Mapped[float | None] = mapped_column(Numeric(18, 4))
-    reorder_level: Mapped[float | None] = mapped_column(Numeric(18, 4))
+    quantity_on_hand: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    unit_cost: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
+    reorder_level: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
     expiry_date: Mapped[date | None] = mapped_column(Date)
 
     corrects_id: Mapped[int | None] = mapped_column(ForeignKey("inventory_snapshots.id"))

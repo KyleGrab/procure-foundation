@@ -112,6 +112,11 @@ def export_price_review(
     lines: list[ExportLine], summary: ExportSummary, output_path: str | Path
 ) -> Path:
     wb = openpyxl.Workbook()
+    # A freshly-constructed Workbook always has exactly one default sheet (openpyxl's own
+    # invariant) - .active is only typed Optional because the same property also covers a
+    # workbook with all its sheets removed, which can't be true here. Asserted, not
+    # silently-narrowed, so this would fail loudly if that invariant were ever wrong.
+    assert wb.active is not None
     wb.remove(wb.active)  # replace the default sheet with named ones in a deliberate order
 
     # --- Executive Summary ---

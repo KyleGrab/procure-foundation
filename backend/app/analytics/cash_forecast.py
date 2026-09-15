@@ -14,6 +14,7 @@ this whole module have a default.
 from __future__ import annotations
 
 from decimal import ROUND_HALF_EVEN, Decimal
+from typing import Any
 
 CURRENCY_QUANTIZE = Decimal("0.0001")
 
@@ -54,7 +55,7 @@ def resolve_weekly_supplier_payments(
 def calculate_weekly_cash_position(
     starting_cash: Decimal, resolved_cash_receipts: Decimal, forced_supplier_payments: Decimal,
     gate_b_operational_cost_pools: Decimal,
-) -> dict:
+) -> dict[str, Any]:
     """
     Weekly Cash Position = Starting Cash + Resolved Cash Receipts - Forced Supplier Payments -
     Gate B Operational Cost Pools - the exact formula this request specifies. All four inputs
@@ -76,7 +77,7 @@ def calculate_weekly_cash_position(
 _REQUIRED_WEEKLY_KEYS = ("resolved_cash_receipts", "forced_supplier_payments", "gate_b_operational_cost_pools")
 
 
-def build_13_week_cash_forecast(opening_cash: Decimal, weekly_inputs: list[dict]) -> dict:
+def build_13_week_cash_forecast(opening_cash: Decimal, weekly_inputs: list[dict[str, Any]]) -> dict[str, Any]:
     """
     opening_cash has no default (the current bank ledger balance, named explicitly in this
     request as the one input that must never silently default to zero) - omitting it is a
@@ -101,7 +102,7 @@ def build_13_week_cash_forecast(opening_cash: Decimal, weekly_inputs: list[dict]
         if missing:
             return {"is_complete": False, "weeks": None, "error": f"week {week_num} missing: {missing}"}
 
-    weeks: list[dict] = []
+    weeks: list[dict[str, Any]] = []
     running_cash = opening_cash
     first_overdraft_week: int | None = None
 

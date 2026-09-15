@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date
+from decimal import Decimal
 
 from sqlalchemy import Date, ForeignKey, Numeric, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -47,5 +48,5 @@ class GoodsReceiptLine(Base, TenantScopedMixin):
     # quantity_ordered is copied here (not just joined via purchase_order_line_id) so a receipt's
     # variance is explainable (spec Section 105) even if the PO line is later changed - the
     # figure a receipt was actually reconciled against at the time is what's stored.
-    quantity_ordered: Mapped[float | None] = mapped_column(Numeric(18, 4))
-    quantity_received: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
+    quantity_ordered: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
+    quantity_received: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)

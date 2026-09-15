@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import uuid
 from datetime import date
+from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import Boolean, Date, ForeignKey, Numeric, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -36,7 +38,7 @@ class CostAllocationRule(Base, TenantScopedMixin):
     # Matches app.analytics.management_accounting.AllocationLevel's values exactly
     # ('direct'|'activity_rate'|'volumetric') - 'unallocated' is never a configured rule, only a
     # calculated outcome when no rule applies, so it's not a valid value here.
-    default_unit_rate: Mapped[float | None] = mapped_column(Numeric(18, 4))
+    default_unit_rate: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
 
     allocation_basis: Mapped[str | None] = mapped_column(String(32))
     # 'weight' | 'distance' | 'trips' | 'volume' | 'time' - what default_unit_rate is actually
@@ -92,13 +94,13 @@ class CostToServeLedger(Base, TenantScopedMixin):
     customer_id: Mapped[str | None] = mapped_column(String(128))
     supplier_id: Mapped[int | None] = mapped_column(ForeignKey("suppliers.id"))
 
-    net_revenue: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
-    cogs: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
-    direct_logistics_cost: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
-    allocated_warehouse_cost: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
-    allocated_overhead_cost: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
-    net_margin: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
-    net_margin_pct: Mapped[float | None] = mapped_column(Numeric(9, 4))  # nullable - None when
+    net_revenue: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    cogs: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    direct_logistics_cost: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    allocated_warehouse_cost: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    allocated_overhead_cost: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    net_margin: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    net_margin_pct: Mapped[Decimal | None] = mapped_column(Numeric(9, 4))  # nullable - None when
     # net_revenue was zero (calculate_customer_net_margin's own documented behavior, never a
     # fabricated 0%)
 
@@ -125,24 +127,24 @@ class WorkingCapitalSnapshot(Base, TenantScopedMixin):
     )
     as_of_date: Mapped[date] = mapped_column(Date, nullable=False)
 
-    accounts_receivable: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
-    accounts_payable: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
-    inventory_value: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
-    cash_balance: Mapped[float | None] = mapped_column(Numeric(18, 4))  # nullable - see
+    accounts_receivable: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    accounts_payable: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    inventory_value: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    cash_balance: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))  # nullable - see
     # calculate_working_capital_metrics: working_capital_ratio is None when cash isn't supplied,
     # never assumed zero
-    annualized_revenue: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
-    annualized_cogs: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
+    annualized_revenue: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    annualized_cogs: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
 
     # dso/dio/dpo/ccc/working_capital_ratio are STORED, computed once at ingestion time via the
     # pure engine, not recomputed on every read - same "the number that was actually used is
     # what's stored" principle as PurchaseInvoiceLine.net_amount (Phase 4c). All nullable,
     # matching the pure functions' own None-on-undefined behavior.
-    dso: Mapped[float | None] = mapped_column(Numeric(9, 1))
-    dio: Mapped[float | None] = mapped_column(Numeric(9, 1))
-    dpo: Mapped[float | None] = mapped_column(Numeric(9, 1))
-    ccc: Mapped[float | None] = mapped_column(Numeric(9, 1))
-    working_capital_ratio: Mapped[float | None] = mapped_column(Numeric(9, 2))
+    dso: Mapped[Decimal | None] = mapped_column(Numeric(9, 1))
+    dio: Mapped[Decimal | None] = mapped_column(Numeric(9, 1))
+    dpo: Mapped[Decimal | None] = mapped_column(Numeric(9, 1))
+    ccc: Mapped[Decimal | None] = mapped_column(Numeric(9, 1))
+    working_capital_ratio: Mapped[Decimal | None] = mapped_column(Numeric(9, 2))
 
     # WC-DERIVED-METRIC-DIAGNOSTICS-R1 (migration 0025): NULL = legacy snapshot, diagnostics were
     # never evaluated/persisted (unknown, not "no issues"). [] = evaluated, nothing to report.
@@ -150,7 +152,7 @@ class WorkingCapitalSnapshot(Base, TenantScopedMixin):
     # "ccc_unavailable_dso_out_of_range") explaining why a dso/dio/dpo/ccc value above is null
     # even though its denominator was genuinely non-zero - see
     # app.services.working_capital_service._apply_days_metric_storage_boundary, the only writer.
-    derived_metric_diagnostics: Mapped[list | None] = mapped_column(JSONB)
+    derived_metric_diagnostics: Mapped[list[Any] | None] = mapped_column(JSONB)
 
     corrects_id: Mapped[int | None] = mapped_column(ForeignKey("working_capital_snapshots.id"))
     uploaded_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
@@ -168,11 +170,11 @@ class AgingLedgerSnapshot(Base, TenantScopedMixin):
     as_of_date: Mapped[date] = mapped_column(Date, nullable=False)
     ledger_type: Mapped[str] = mapped_column(String(16), nullable=False)  # 'debtors' | 'creditors'
 
-    current_balance: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
-    days_30: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
-    days_60: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
-    days_90: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
-    days_120_plus: Mapped[float] = mapped_column(Numeric(18, 4), nullable=False)
+    current_balance: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    days_30: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    days_60: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    days_90: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
+    days_120_plus: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
 
     corrects_id: Mapped[int | None] = mapped_column(ForeignKey("aging_ledger_snapshots.id"))
     uploaded_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)

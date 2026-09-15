@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Numeric, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -41,13 +43,13 @@ class Contract(Base, TenantScopedMixin):
     # See ADR-009: cpi_linked contracts never carry a stored index value here - the value is
     # supplied at calculation time, not persisted as if it were a fixed contract term.
     escalation_type: Mapped[str] = mapped_column(String(32), nullable=False, default="none")
-    escalation_rate_pct: Mapped[float | None] = mapped_column(Numeric(9, 6))
+    escalation_rate_pct: Mapped[Decimal | None] = mapped_column(Numeric(9, 6))
 
     # Verified summaries only - free text a human confirmed against the signed document, never
     # raw AI output (spec Section 31's explicit warning).
     rebate_terms_summary: Mapped[str | None] = mapped_column(String(2048))
     sla_terms_summary: Mapped[str | None] = mapped_column(String(2048))
-    minimum_spend_commitment: Mapped[float | None] = mapped_column(Numeric(18, 4))
+    minimum_spend_commitment: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
 
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="active")
     status_calculated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -69,7 +71,7 @@ class ContractExtraction(Base, TenantScopedMixin):
     contract_id: Mapped[int | None] = mapped_column(ForeignKey("contracts.id"))
 
     source_file_storage_key: Mapped[str] = mapped_column(String(512), nullable=False)
-    extracted_fields: Mapped[dict] = mapped_column(JSONB, nullable=False)  # {field: {value, confidence}}
+    extracted_fields: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)  # {field: {value, confidence}}
     extraction_model: Mapped[str | None] = mapped_column(String(64))
     prompt_version: Mapped[str | None] = mapped_column(String(32))
 

@@ -17,11 +17,14 @@ worse than letting the dashboard crash, not better.
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
 
 _CAUGHT_EXCEPTION_TYPES = (ValueError, TypeError)
 
 
-def build_widget_result(compute_fn: Callable[..., dict], *args, **kwargs) -> dict:
+def build_widget_result(
+    compute_fn: Callable[..., dict[str, Any]], *args: Any, **kwargs: Any
+) -> dict[str, Any]:
     """
     Calls compute_fn(*args, **kwargs). On success: {"status": "ok", "data": <real result>,
     "reason_codes": []}. On a ValueError or TypeError (the two shapes this codebase's real gate
@@ -39,9 +42,9 @@ def build_widget_result(compute_fn: Callable[..., dict], *args, **kwargs) -> dic
 
 
 def build_management_canvas_payload(
-    revenue_layer_fn: Callable[[], dict], operations_layer_fn: Callable[[], dict],
-    liquidity_layer_fn: Callable[[], dict], risk_layer_fn: Callable[[], dict],
-) -> dict:
+    revenue_layer_fn: Callable[[], dict[str, Any]], operations_layer_fn: Callable[[], dict[str, Any]],
+    liquidity_layer_fn: Callable[[], dict[str, Any]], risk_layer_fn: Callable[[], dict[str, Any]],
+) -> dict[str, Any]:
     """
     Each layer function is a zero-argument callable wrapping an already-parameterized real
     calculation (a closure over the period's real, resolved figures - this function never sees

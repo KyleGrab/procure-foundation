@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from datetime import UTC
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,7 +32,7 @@ from app.analytics.price_review_calculations import (
     classify_risk,
     determine_comparison_basis,
 )
-from app.analytics.price_review_summary import PriceReviewLineForSummary, summarize
+from app.analytics.price_review_summary import PriceReviewLineForSummary, SupplierSummary, summarize
 from app.core.exceptions import ConflictError, NotFoundError, ValidationFailedError
 from app.db.models import Opportunity, PriceReview, PriceReviewFile, PriceReviewLine, Supplier
 from app.ingestion.staging import compute_checksum
@@ -130,7 +131,7 @@ def _normalize(pack_raw: str | None, price: Decimal | None) -> tuple[Decimal | N
 
 async def run_matching(
     db: AsyncSession, *, organisation_id: int, review_id: int,
-    old_rows: list[dict], new_rows: list[dict],
+    old_rows: list[dict[str, Any]], new_rows: list[dict[str, Any]],
 ) -> list[PriceReviewLine]:
     """
     Runs the proven matching pipeline (app.matching.scorer) against staged rows and persists one
@@ -414,7 +415,7 @@ async def create_opportunity_from_line(
     return opportunity
 
 
-async def get_summary(db: AsyncSession, *, review_id: int):
+async def get_summary(db: AsyncSession, *, review_id: int) -> SupplierSummary:
     """Wraps app.analytics.price_review_summary.summarize (proven in tests_pure/test_calculations.py)
     around the review's persisted lines."""
     result = await db.execute(select(PriceReviewLine).where(PriceReviewLine.price_review_id == review_id))

@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import uuid
 from datetime import date
+from typing import Any
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.constants import Permission
+from app.core.constants import Currency, Permission
 from app.core.exceptions import NotFoundError
 from app.core.permissions import require_permission
 from app.core.security import AccessTokenClaims
@@ -55,7 +56,7 @@ def _to_read_model(agreement: RebateAgreement, supplier_public_id: uuid.UUID) ->
         public_id=agreement.public_id, supplier_public_id=supplier_public_id, title=agreement.title,
         rebate_type=agreement.rebate_type, period_type=agreement.period_type,
         flat_rate_pct=agreement.flat_rate_pct, bands=agreement.bands, fixed_amount=agreement.fixed_amount,
-        currency=agreement.currency, status=agreement.status,
+        currency=Currency(agreement.currency), status=agreement.status,
     )
 
 
@@ -159,7 +160,7 @@ async def check_rebate_threshold_alert(
     claims: AccessTokenClaims = Depends(require_permission(Permission.VIEW_FINANCIALS)),
     db: AsyncSession = Depends(get_db),
     as_of_date: date = Depends(get_organisation_business_date),
-) -> dict:
+) -> dict[str, Any]:
     """Manual trigger in this delivery - the confirmed 'dynamic recalculation on ingestion' +
     'monthly close' design means a scheduled job (Phase 9) is what should call this and
     close_period in production, same caveat as contracts' check-alerts endpoint."""

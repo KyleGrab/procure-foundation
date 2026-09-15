@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -86,7 +87,7 @@ def refresh_status(contract: Contract, *, as_of_date: date) -> None:
     contract.status_calculated_at = datetime.now(UTC)
 
 
-def get_derived_fields(contract: Contract) -> dict:
+def get_derived_fields(contract: Contract) -> dict[str, Any]:
     """notice_deadline / next_renewal_date shown alongside stored fields (ContractRead schema) -
     always computed fresh, never persisted as if they were independent facts."""
     deadline = calculate_notice_deadline(contract.expiry_date, contract.notice_period_days)

@@ -11,6 +11,8 @@ is also what makes it testable in an environment with no network to install thos
 """
 from __future__ import annotations
 
+from typing import Any
+
 from app.core.exceptions import PermissionDeniedError, ValidationFailedError
 
 ALLOWED_PROMOTION_FIELDS = frozenset({
@@ -35,7 +37,7 @@ def ensure_verified(verification_status: str) -> None:
 
 
 def select_promotable_fields(
-    extracted_fields: dict[str, dict], field_names: list[str]
+    extracted_fields: dict[str, dict[str, Any]], field_names: list[str]
 ) -> dict[str, str]:
     """Field-by-field selection (spec Section 31's per-field verification), never all-or-nothing.
     Raises on any requested field name outside the allowlist - a caller asking to promote a field
@@ -54,7 +56,7 @@ def select_promotable_fields(
 
 
 def promote_fields_from_extraction(
-    extracted_fields: dict[str, dict], verification_status: str, field_names: list[str],
+    extracted_fields: dict[str, dict[str, Any]], verification_status: str, field_names: list[str],
 ) -> dict[str, str]:
     """
     The full guarded pipeline as one call: ensure_verified() runs first and raises before

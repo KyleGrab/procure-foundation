@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal, InvalidOperation
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,7 +22,7 @@ from app.services import audit_service, rebate_aggregation_service
 
 async def ingest_transactions(
     db: AsyncSession, *, organisation_id: int, user_id: int, supplier_id: int,
-    mapped_rows: list[dict], source_file_storage_key: str,
+    mapped_rows: list[dict[str, Any]], source_file_storage_key: str,
 ) -> list[PurchaseTransaction]:
     """
     mapped_rows are already through app.ingestion.purchase_transaction_mapping +

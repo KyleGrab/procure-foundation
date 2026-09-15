@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
+from typing import Any
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -38,7 +39,7 @@ async def calculate_exposure(
     payload: FxExposureRequest,
     claims: AccessTokenClaims = Depends(require_permission(Permission.UPLOAD_DATA)),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> dict[str, Any]:
     # calculate_fx_transaction_exposure's own ValueError/TypeError (missing/non-positive rates)
     # is caught here and mapped to a structured 422 - main.py's generic handler only recognizes
     # ProcureIQError subclasses, not raw ValueError/TypeError, so this mapping is explicit.

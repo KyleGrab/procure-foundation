@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date
+from decimal import Decimal
 
 from sqlalchemy import Boolean, Date, Numeric, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -33,7 +34,7 @@ class Organisation(Base, TimestampMixin):
     timezone: Mapped[str] = mapped_column(String(64), nullable=False, default="Africa/Johannesburg")
 
     industry: Mapped[str | None] = mapped_column(String(128))
-    annual_procurement_spend: Mapped[float | None] = mapped_column(Numeric(18, 4))
+    annual_procurement_spend: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
     fiscal_year_start: Mapped[date | None] = mapped_column(Date)
 
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
