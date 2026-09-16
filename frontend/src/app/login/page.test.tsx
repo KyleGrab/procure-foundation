@@ -79,4 +79,27 @@ describe("LoginPage - demo sign-in", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continue with demo sign-in" }));
     expect(sessionStorage.getItem("procureiq_access_token")).toBeNull();
   });
+
+  it("shows only the Illustrative demo panel - no email/password fields, no real Log in button, no dev-credentials panel - when both flags are set (PROCUREIQ-DEMO-LOGIN-SINGLE-ENTRY-R1)", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("NEXT_PUBLIC_DEMO_MODE", "true");
+    render(<LoginPage />);
+    expect(screen.queryByPlaceholderText("Email")).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("Password")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Log in" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Log in" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Use demo credentials" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Continue with demo sign-in" })).toBeInTheDocument();
+  });
+
+  it("keeps the normal login form (and the dev-credentials panel) exactly as before in ordinary local development, with demo mode not enabled", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("NEXT_PUBLIC_DEMO_MODE", "");
+    render(<LoginPage />);
+    expect(screen.getByPlaceholderText("Email")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Password")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Log in" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Use demo credentials" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Continue with demo sign-in" })).not.toBeInTheDocument();
+  });
 });

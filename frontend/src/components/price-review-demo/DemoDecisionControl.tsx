@@ -38,14 +38,14 @@ export function DemoDecisionControl({ lineId, decision, onDecide }: DemoDecision
             className={`rounded border px-3 py-1.5 text-xs font-medium ${
               decision === key
                 ? "border-indigo-600 bg-indigo-600 text-white"
-                : "text-slate-700 hover:bg-[color:var(--app-surface-light-strong)]"
+                : "text-slate-300 hover:bg-[color:var(--app-surface-light-strong)]"
             }`}
           >
             {DECISION_LABELS[key]}
           </button>
         ))}
       </div>
-      <p className="mt-2 text-xs font-medium text-amber-700">
+      <p className="mt-2 text-xs font-medium text-amber-400">
         Demo-only — not saved to ProcureIQ.
         {decision ? ` Recorded locally as "${DECISION_LABELS[decision]}."` : ""}
       </p>

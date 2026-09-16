@@ -38,24 +38,24 @@ export default function NewPriceReviewPage() {
     <main className="mx-auto max-w-2xl p-8">
       <ol className="mb-8 flex flex-wrap gap-2 text-xs text-slate-500">
         {STEPS.map((step, i) => (
-          <li key={step} className={i === 0 ? "font-semibold text-indigo-700" : ""}>
+          <li key={step} className={i === 0 ? "font-semibold text-indigo-300" : ""}>
             {i + 1}. {step}
           </li>
         ))}
       </ol>
       <h1 className="mb-4 text-xl font-semibold">New Price Review</h1>
       <form onSubmit={handleCreate} className="flex flex-col gap-3">
-        <label className="text-sm text-slate-600">
+        <label className="text-sm text-slate-400">
           Supplier
           <input
-            className="mt-1 w-full rounded border px-3 py-2 focus:border-indigo-500 focus:outline-none"
+            className="mt-1 w-full rounded border border-[#1F2438] bg-[#131625] px-3 py-2 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none"
             placeholder="Supplier ID"
             value={supplierPublicId}
             onChange={(e) => setSupplierPublicId(e.target.value)}
             required
           />
         </label>
-        {error && <p className="text-sm text-rose-600">{error}</p>}
+        {error && <p className="text-sm text-rose-400">{error}</p>}
         <button className="rounded bg-indigo-500 px-4 py-2 text-white hover:bg-indigo-600" type="submit">
           Create Review &amp; Continue to Upload
         </button>

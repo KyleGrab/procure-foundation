@@ -11,28 +11,28 @@ import { DEMO_REVIEW } from "@/lib/price-review-demo-data";
 export default function PriceReviewDemoOverviewPage() {
   return (
     <main className="mx-auto max-w-3xl p-8">
-      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Illustrative walkthrough</p>
-      <h1 className="mb-1 text-xl font-semibold text-slate-900">Price Review — {DEMO_REVIEW.supplier_name}</h1>
-      <p className="mb-6 text-sm text-slate-600">
+      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-indigo-300">Illustrative walkthrough</p>
+      <h1 className="mb-1 text-xl font-semibold text-slate-100">Price Review — {DEMO_REVIEW.supplier_name}</h1>
+      <p className="mb-6 text-sm text-slate-400">
         A made-up supplier and price list, walking through the same steps a real review would.
       </p>
 
       <dl className="mb-8 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
         <div className="rounded border p-3">
           <dt className="text-slate-500">Increase received</dt>
-          <dd className="text-lg font-semibold text-slate-900">{DEMO_REVIEW.received_at}</dd>
+          <dd className="text-lg font-semibold text-slate-100">{DEMO_REVIEW.received_at}</dd>
         </div>
         <div className="rounded border p-3">
           <dt className="text-slate-500">Status</dt>
-          <dd className="text-lg font-semibold text-slate-900">{DEMO_REVIEW.status_label}</dd>
+          <dd className="text-lg font-semibold text-slate-100">{DEMO_REVIEW.status_label}</dd>
         </div>
         <div className="rounded border p-3">
           <dt className="text-slate-500">Effective date</dt>
-          <dd className="text-lg font-semibold text-slate-900">{DEMO_REVIEW.effective_date}</dd>
+          <dd className="text-lg font-semibold text-slate-100">{DEMO_REVIEW.effective_date}</dd>
         </div>
         <div className="rounded border p-3">
           <dt className="text-slate-500">Lines</dt>
-          <dd className="text-lg font-semibold text-slate-900">{DEMO_REVIEW.line_count}</dd>
+          <dd className="text-lg font-semibold text-slate-100">{DEMO_REVIEW.line_count}</dd>
         </div>
       </dl>
 
@@ -50,7 +50,7 @@ export default function PriceReviewDemoOverviewPage() {
         <Link href="/price-reviews/demo/negotiation" className="rounded border p-3 hover:bg-[color:var(--app-surface-light-strong)]">
           Negotiation
         </Link>
-        <Link href="/price-reviews" className="rounded border p-3 text-slate-600 hover:bg-[color:var(--app-surface-light-strong)]">
+        <Link href="/price-reviews" className="rounded border p-3 text-slate-400 hover:bg-[color:var(--app-surface-light-strong)]">
           ← Back to Price Reviews
         </Link>
       </div>

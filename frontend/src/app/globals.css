@@ -18,18 +18,18 @@
   --app-accent: #6366f1;
 
   /**
-   * PROCUREIQ-BLUE-SURFACE-R1: the light half of the same theme, for content that needs to stay
-   * light-on-dark-text for legibility (dense procurement tables/forms - Price Reviews) rather
-   * than the dark bg-[#0B0D17]/text-slate-100 half used everywhere else. Every value is a subtle
-   * indigo tint of white/near-white, not a second, unrelated palette - chosen so financial tables
-   * stay exactly as scannable as plain white (contrast against dark text is effectively
-   * unchanged) while still visibly reading as part of this app's blue theme rather than a plain
-   * white insert dropped onto it. Consumed by components/ui/LightSurface.tsx and, via
-   * tailwind.config.ts's borderColor.DEFAULT, by every bare `border`/`border-t`/`border-b`/etc.
-   * utility in the Price Review subtree (confirmed by grep to be the ONLY place in this codebase
-   * that relies on Tailwind's default border color, so this has zero effect anywhere else).
+   * PROCUREIQ-BLUE-SURFACE-R2: retint of the PROCUREIQ-BLUE-SURFACE-R1 tokens below. The near-
+   * white values these three variables originally held read as plain white in practice, not as
+   * part of this app's blue/navy theme - the Welcome gateway and Procurement Command Centre both
+   * use dark, translucent indigo-tinted panels (bg-[#131625]/90, border-[#1F2438]) instead. These
+   * three variables now hold that same dark treatment, so every existing consumer - LightSurface,
+   * LineDetailDrawer, every hover state and bare `border` utility across the Price Review subtree
+   * (confirmed by grep to be the ONLY place that relies on Tailwind's default border color, via
+   * tailwind.config.ts's borderColor.DEFAULT) - picks it up automatically, with zero effect
+   * anywhere else in the app. Names kept as "light" for minimal diff against everything that
+   * already references them by name; only the values changed.
    */
-  --app-surface-light: #f4f5fc;
-  --app-surface-light-strong: #eceefa;
-  --app-border-light: #dde1f5;
+  --app-surface-light: rgba(19, 22, 37, 0.9);
+  --app-surface-light-strong: #1d2035;
+  --app-border-light: #1f2438;
 }

@@ -22,6 +22,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  // PROCUREIQ-DEMO-LOGIN-SINGLE-ENTRY-R1: when both flags are set, this is a local presentation
+  // machine - the page must show only the Illustrative demo entry point below, not a second,
+  // real-looking login form beside it. Reuses shouldShowDemoLoginBypass's own stricter AND gate
+  // (NODE_ENV==="development" AND NEXT_PUBLIC_DEMO_MODE==="true") rather than a new condition, so
+  // this can never drift out of sync with the one guard that already decides whether the demo
+  // entry point itself is shown - same underlying case computed once, not two independent checks
+  // that could disagree.
+  const isFullDemoMode = shouldShowDemoLoginBypass(process.env.NODE_ENV, process.env.NEXT_PUBLIC_DEMO_MODE);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -72,29 +81,37 @@ export default function LoginPage() {
     // page's own heading already had.
     <main className="min-h-screen px-6 py-24">
       <div className="mx-auto max-w-sm">
-        <h1 className="mb-6 text-xl font-semibold text-white">Log in</h1>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <input
-            className="rounded border border-[#1F2438] bg-[#131625] px-3 py-2 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none"
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <input
-            className="rounded border border-[#1F2438] bg-[#131625] px-3 py-2 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none"
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          {error && <p className="text-sm text-rose-400">{error}</p>}
-          <button className="rounded bg-indigo-500 px-4 py-2 text-white hover:bg-indigo-600" type="submit">
-            Log in
-          </button>
-        </form>
+        {/* Normal production authentication form - the entire section, heading included, only
+            for the case this page isn't acting as a local presentation machine (see
+            isFullDemoMode above). Unchanged in every other respect: same fields, same styling,
+            same handleSubmit/real POST /auth/login flow. */}
+        {!isFullDemoMode && (
+          <>
+            <h1 className="mb-6 text-xl font-semibold text-white">Log in</h1>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+              <input
+                className="rounded border border-[#1F2438] bg-[#131625] px-3 py-2 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none"
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+              <input
+                className="rounded border border-[#1F2438] bg-[#131625] px-3 py-2 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none"
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              {error && <p className="text-sm text-rose-400">{error}</p>}
+              <button className="rounded bg-indigo-500 px-4 py-2 text-white hover:bg-indigo-600" type="submit">
+                Log in
+              </button>
+            </form>
+          </>
+        )}
 
         {shouldShowDemoLoginBypass(process.env.NODE_ENV, process.env.NEXT_PUBLIC_DEMO_MODE) && (
           <div className="mt-6 rounded border border-dashed border-indigo-500/40 bg-indigo-950/20 p-3">
@@ -113,7 +130,11 @@ export default function LoginPage() {
           </div>
         )}
 
-        {shouldShowDevDemoLogin(process.env.NODE_ENV) && (
+        {/* Also excluded from the local-demo-machine case (isFullDemoMode) below - the page must
+            show only the Illustrative demo panel then, per PROCUREIQ-DEMO-LOGIN-SINGLE-ENTRY-R1.
+            Unaffected in ordinary local development (demo mode not enabled), where this keeps
+            its existing behavior exactly. */}
+        {shouldShowDevDemoLogin(process.env.NODE_ENV) && !isFullDemoMode && (
           <div className="mt-6 rounded border border-dashed border-amber-700/50 bg-amber-950/20 p-3">
             <p className="text-xs text-amber-400">Dev only - not shown in production</p>
             <button

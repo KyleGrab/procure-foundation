@@ -33,7 +33,7 @@ export default function PriceReviewsPage() {
         </div>
       </div>
       {reviews && reviews.length === 0 && (
-        <p className="text-slate-600">No price reviews yet. Start one to compare a supplier&apos;s price lists.</p>
+        <p className="text-slate-400">No price reviews yet. Start one to compare a supplier&apos;s price lists.</p>
       )}
     </main>
   );

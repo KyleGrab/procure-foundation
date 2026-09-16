@@ -37,14 +37,14 @@ export default function NegotiationPage() {
   return (
     <main className="mx-auto max-w-3xl p-8">
       <h1 className="mb-6 text-xl font-semibold">Negotiation</h1>
-      <p className="mb-6 text-sm text-slate-600">
+      <p className="mb-6 text-sm text-slate-400">
         Set target prices per line on the Analysis screen, then generate a negotiation brief
         summarising priorities and talking points from verified figures only.
       </p>
       <button onClick={generateBrief} disabled={loading} className="rounded bg-indigo-500 px-4 py-2 text-white hover:bg-indigo-600 disabled:opacity-40">
         {loading ? "Generating..." : "Generate Negotiation Brief"}
       </button>
-      {error && <p className="mt-4 text-sm text-rose-600">{error}</p>}
+      {error && <p className="mt-4 text-sm text-rose-400">{error}</p>}
       {brief && <pre className="mt-6 whitespace-pre-wrap rounded border bg-[color:var(--app-surface-light-strong)] p-4 text-sm">{brief}</pre>}
     </main>
   );
