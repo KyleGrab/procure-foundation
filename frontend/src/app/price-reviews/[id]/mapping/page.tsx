@@ -53,19 +53,19 @@ export default function MappingPage() {
         <div>
           <p className="mb-2 text-sm font-medium">Previous Price List</p>
           <input type="file" accept=".csv,.xlsx" onChange={(e) => e.target.files && upload("previous", e.target.files[0])} />
-          {previousResult && <p className="mt-2 text-sm text-slate-600">{previousResult.row_count} rows detected</p>}
+          {previousResult && <p className="mt-2 text-sm text-slate-400">{previousResult.row_count} rows detected</p>}
         </div>
         <div>
           <p className="mb-2 text-sm font-medium">New Price List</p>
           <input type="file" accept=".csv,.xlsx" onChange={(e) => e.target.files && upload("new", e.target.files[0])} />
-          {newResult && <p className="mt-2 text-sm text-slate-600">{newResult.row_count} rows detected</p>}
+          {newResult && <p className="mt-2 text-sm text-slate-400">{newResult.row_count} rows detected</p>}
         </div>
       </div>
 
       {(previousResult || newResult) && (
         <div className="mt-8">
           <h2 className="mb-2 text-sm font-semibold">Suggested Column Mapping</h2>
-          <p className="mb-4 text-sm text-slate-600">
+          <p className="mb-4 text-sm text-slate-400">
             Review each mapping below. Confirm or correct before validation runs - nothing is
             processed until you confirm.
           </p>
@@ -75,7 +75,7 @@ export default function MappingPage() {
         </div>
       )}
 
-      {error && <p className="mt-4 text-sm text-rose-600">{error}</p>}
+      {error && <p className="mt-4 text-sm text-rose-400">{error}</p>}
       <button
         onClick={confirmAndContinue}
         disabled={!previousResult || !newResult}

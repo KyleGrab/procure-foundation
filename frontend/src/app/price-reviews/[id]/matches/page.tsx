@@ -35,7 +35,7 @@ export default function MatchesPage() {
   return (
     <main className="mx-auto max-w-5xl p-8">
       <h1 className="mb-2 text-xl font-semibold">Review Uncertain Matches</h1>
-      <p className="mb-6 text-sm text-slate-600">{lines.length} item(s) need a decision before analysis.</p>
+      <p className="mb-6 text-sm text-slate-400">{lines.length} item(s) need a decision before analysis.</p>
       <div className="flex flex-col gap-4">
         {lines.map((line) => (
           <div key={line.public_id} className="rounded border p-4">

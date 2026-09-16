@@ -27,11 +27,11 @@ export default function PriceReviewDemoAnalysisPage() {
 
   return (
     <main className="mx-auto max-w-6xl p-8">
-      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Illustrative walkthrough</p>
-      <h1 className="mb-2 text-xl font-semibold text-slate-900">
+      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-indigo-300">Illustrative walkthrough</p>
+      <h1 className="mb-2 text-xl font-semibold text-slate-100">
         Analysis &amp; investigation — {DEMO_REVIEW.supplier_name}
       </h1>
-      <p className="mb-6 text-sm text-slate-600">
+      <p className="mb-6 text-sm text-slate-400">
         Filter by investigation status, then open a line for its full detail and to record a
         demo-only decision.
       </p>
@@ -51,10 +51,10 @@ export default function PriceReviewDemoAnalysisPage() {
       />
 
       <div className="mt-8 flex gap-4 text-sm">
-        <Link href="/price-reviews/demo" className="text-slate-600 underline hover:text-slate-900">
+        <Link href="/price-reviews/demo" className="text-slate-400 underline hover:text-slate-100">
           ← Back to overview
         </Link>
-        <Link href="/price-reviews/demo/negotiation" className="text-indigo-700 underline hover:text-indigo-900">
+        <Link href="/price-reviews/demo/negotiation" className="text-indigo-300 underline hover:text-indigo-200">
           Continue to negotiation →
         </Link>
       </div>

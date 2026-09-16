@@ -22,7 +22,7 @@ export default function PriceReviewOverviewPage() {
   return (
     <main className="mx-auto max-w-2xl p-8">
       <h1 className="mb-2 text-xl font-semibold">Price Review</h1>
-      <p className="mb-6 text-sm text-slate-600">Status: {review?.status ?? "loading..."}</p>
+      <p className="mb-6 text-sm text-slate-400">Status: {review?.status ?? "loading..."}</p>
       <div className="flex flex-col gap-2 text-sm">
         <Link href={`/price-reviews/${params.id}/mapping`} className="rounded border p-3 hover:bg-[color:var(--app-surface-light-strong)]">Upload &amp; Map Columns</Link>
         <Link href={`/price-reviews/${params.id}/matches`} className="rounded border p-3 hover:bg-[color:var(--app-surface-light-strong)]">Review Uncertain Matches</Link>

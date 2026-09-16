@@ -45,10 +45,10 @@ export function LineDetailDrawer({ line, decision, onDecide, onClose }: LineDeta
         role="dialog"
         aria-modal="true"
         aria-labelledby="demo-line-detail-heading"
-        className="relative flex h-full w-full max-w-md flex-col overflow-y-auto border-l bg-[color:var(--app-surface-light)] p-6 text-slate-900 shadow-xl"
+        className="relative flex h-full w-full max-w-md flex-col overflow-y-auto border-l bg-[color:var(--app-surface-light)] p-6 text-slate-100 shadow-xl"
       >
         <div className="flex items-start justify-between gap-4">
-          <h2 id="demo-line-detail-heading" className="text-base font-semibold text-slate-900">
+          <h2 id="demo-line-detail-heading" className="text-base font-semibold text-slate-100">
             {formatDecimalOrUnknown(line.new_description ?? line.old_description)}
           </h2>
           <button
@@ -65,42 +65,42 @@ export function LineDetailDrawer({ line, decision, onDecide, onClose }: LineDeta
         <dl className="mt-6 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
           <div>
             <dt className="text-slate-500">Old price</dt>
-            <dd className="font-medium text-slate-900">{formatDecimalCurrency(line.old_price)}</dd>
+            <dd className="font-medium text-slate-100">{formatDecimalCurrency(line.old_price)}</dd>
           </div>
           <div>
             <dt className="text-slate-500">New price</dt>
-            <dd className="font-medium text-slate-900">{formatDecimalCurrency(line.new_price)}</dd>
+            <dd className="font-medium text-slate-100">{formatDecimalCurrency(line.new_price)}</dd>
           </div>
           <div>
             <dt className="text-slate-500">Change</dt>
-            <dd className="font-medium text-slate-900">{formatDecimalPercent(line.percentage_change)}</dd>
+            <dd className="font-medium text-slate-100">{formatDecimalPercent(line.percentage_change)}</dd>
           </div>
           <div>
             <dt className="text-slate-500">Match confidence</dt>
-            <dd className="font-medium text-slate-900">{formatDecimalPercent(line.match_confidence, 0)}</dd>
+            <dd className="font-medium text-slate-100">{formatDecimalPercent(line.match_confidence, 0)}</dd>
           </div>
           <div>
             <dt className="text-slate-500">Old pack</dt>
-            <dd className="font-medium text-slate-900">{formatDecimalOrUnknown(line.old_pack_raw)}</dd>
+            <dd className="font-medium text-slate-100">{formatDecimalOrUnknown(line.old_pack_raw)}</dd>
           </div>
           <div>
             <dt className="text-slate-500">New pack</dt>
-            <dd className="font-medium text-slate-900">{formatDecimalOrUnknown(line.new_pack_raw)}</dd>
+            <dd className="font-medium text-slate-100">{formatDecimalOrUnknown(line.new_pack_raw)}</dd>
           </div>
           <div>
             <dt className="text-slate-500">Annual impact</dt>
-            <dd className="font-medium text-slate-900">{formatDecimalCurrency(line.annual_impact)}</dd>
+            <dd className="font-medium text-slate-100">{formatDecimalCurrency(line.annual_impact)}</dd>
           </div>
           <div>
             <dt className="text-slate-500">Investigation status</dt>
-            <dd className="font-medium text-slate-900">
+            <dd className="font-medium text-slate-100">
               {category === "needs_attention" ? "Needs attention" : category === "unknown" ? "Unknown" : "Matched"}
             </dd>
           </div>
         </dl>
 
         <div className="mt-6 border-t pt-4">
-          <h3 className="mb-2 text-sm font-medium text-slate-900">Record a decision</h3>
+          <h3 className="mb-2 text-sm font-medium text-slate-100">Record a decision</h3>
           <DemoDecisionControl lineId={line.public_id} decision={decision} onDecide={onDecide} />
         </div>
       </div>

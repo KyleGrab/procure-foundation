@@ -49,7 +49,7 @@ export function DemoAnalysisTable({ lines, filter, onFilterChange, onSelectLine 
             className={`rounded border px-3 py-1 ${
               filter === f.key
                 ? "border-indigo-600 bg-indigo-600 text-white"
-                : "text-slate-700 hover:bg-[color:var(--app-surface-light-strong)]"
+                : "text-slate-300 hover:bg-[color:var(--app-surface-light-strong)]"
             }`}
           >
             {f.label}
@@ -84,7 +84,7 @@ export function DemoAnalysisTable({ lines, filter, onFilterChange, onSelectLine 
                 <td>{formatDecimalPercent(line.match_confidence, 0)}</td>
                 <td>
                   {attentionLabel ? (
-                    <span className={category === "needs_attention" ? "font-medium text-amber-700" : "font-medium text-slate-500"}>
+                    <span className={category === "needs_attention" ? "font-medium text-amber-400" : "font-medium text-slate-500"}>
                       {attentionLabel}
                     </span>
                   ) : (
@@ -95,7 +95,7 @@ export function DemoAnalysisTable({ lines, filter, onFilterChange, onSelectLine 
                   <button
                     type="button"
                     onClick={() => onSelectLine(line)}
-                    className="rounded px-2 py-1 text-indigo-700 underline hover:bg-indigo-50"
+                    className="rounded px-2 py-1 text-indigo-300 underline hover:bg-indigo-950/30"
                   >
                     View
                   </button>

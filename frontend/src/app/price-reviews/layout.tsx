@@ -1,15 +1,13 @@
 /**
  * Shared shell for every /price-reviews/* route (history list, new-review wizard, per-review
  * wizard steps, and the illustrative demo walkthrough nested under it) - PROCUREIQ-APP-BACKGROUND-R1,
- * retinted under PROCUREIQ-BLUE-SURFACE-R1.
+ * retinted under PROCUREIQ-BLUE-SURFACE-R1, then again under R2.
  *
- * The app's shared background (app/layout.tsx's AppBackground) is dark by default, but every page
- * in this subtree was already written assuming a light, opaque background and dark text (confirmed
- * by grep across every page.tsx here before this was added, not assumed) - their tables, forms,
- * and headings never set their own bg/text color at the page-root level. This shared panel gives
- * them the light, opaque surface they already depend on, using components/ui/LightSurface.tsx -
- * the app's softly blue-tinted light surface, not a plain white block - framed by the same dark
- * app background everywhere else.
+ * The app's shared background (app/layout.tsx's AppBackground) is dark; this panel now matches it
+ * instead of sitting on top of it as a separate light block - components/ui/LightSurface.tsx is
+ * the same translucent bg-[#131625]/90 + border-[#1F2438] treatment the Welcome gateway and
+ * Procurement Command Centre already use, so a page in this subtree reads as part of one
+ * consistent app rather than a light insert dropped onto a dark one.
  *
  * app/price-reviews/demo/layout.tsx (nested under this one) had its own bg-white wrapper before
  * PROCUREIQ-APP-BACKGROUND-R1; that's removed in favour of this shared panel so the two don't

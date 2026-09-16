@@ -25,22 +25,22 @@ export default function PriceReviewDemoNegotiationPage() {
 
   return (
     <main className="mx-auto max-w-3xl p-8">
-      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Illustrative walkthrough</p>
-      <h1 className="mb-6 text-xl font-semibold text-slate-900">Negotiation — {DEMO_REVIEW.supplier_name}</h1>
+      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-indigo-300">Illustrative walkthrough</p>
+      <h1 className="mb-6 text-xl font-semibold text-slate-100">Negotiation — {DEMO_REVIEW.supplier_name}</h1>
 
       <section className="mb-8 rounded border p-4">
-        <h2 className="mb-1 text-sm font-semibold text-slate-900">Illustrative negotiation brief (demo)</h2>
+        <h2 className="mb-1 text-sm font-semibold text-slate-100">Illustrative negotiation brief (demo)</h2>
         <p className="mb-3 text-xs text-slate-500">
           Built from this walkthrough&apos;s own fabricated lines only — not AI-generated, and not
           based on any live supplier or customer data.
         </p>
-        <ul className="list-disc space-y-3 pl-5 text-sm text-slate-700">
+        <ul className="list-disc space-y-3 pl-5 text-sm text-slate-300">
           {criticalIncrease && (
             <li>
               <span className="font-medium">{criticalIncrease.old_description}:</span> proposed
               increase of {formatDecimalPercent(criticalIncrease.percentage_change)} (
               {formatDecimalCurrency(criticalIncrease.old_price)} → {formatDecimalCurrency(criticalIncrease.new_price)}
-              ), flagged <span className="font-medium text-amber-700">critical</span>. Ask for the
+              ), flagged <span className="font-medium text-amber-400">critical</span>. Ask for the
               underlying cost justification before accepting — this is the largest single swing
               in the review.
             </li>
@@ -66,30 +66,30 @@ export default function PriceReviewDemoNegotiationPage() {
       </section>
 
       <section className="rounded border border-dashed p-4">
-        <h2 className="mb-2 text-sm font-semibold text-slate-900">Live AI negotiation brief</h2>
-        <p className="mb-3 text-sm text-slate-600">
+        <h2 className="mb-2 text-sm font-semibold text-slate-100">Live AI negotiation brief</h2>
+        <p className="mb-3 text-sm text-slate-400">
           The real negotiation-brief endpoint is available for a real review, not this
           illustrative walkthrough.
         </p>
         <button
           type="button"
           onClick={() => setLiveBriefRequested(true)}
-          className="rounded border px-4 py-2 text-sm font-medium text-slate-700 hover:bg-[color:var(--app-surface-light-strong)]"
+          className="rounded border px-4 py-2 text-sm font-medium text-slate-300 hover:bg-[color:var(--app-surface-light-strong)]"
         >
           Generate live AI brief
         </button>
         {liveBriefRequested && (
-          <p role="status" className="mt-3 text-sm font-medium text-amber-700">
+          <p role="status" className="mt-3 text-sm font-medium text-amber-400">
             Live AI brief unavailable in demo mode.
           </p>
         )}
       </section>
 
       <div className="mt-8 flex gap-4 text-sm">
-        <Link href="/price-reviews/demo/analysis" className="text-slate-600 underline hover:text-slate-900">
+        <Link href="/price-reviews/demo/analysis" className="text-slate-400 underline hover:text-slate-100">
           ← Back to analysis
         </Link>
-        <Link href="/price-reviews/demo" className="text-slate-600 underline hover:text-slate-900">
+        <Link href="/price-reviews/demo" className="text-slate-400 underline hover:text-slate-100">
           ← Back to overview
         </Link>
       </div>
