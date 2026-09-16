@@ -46,7 +46,7 @@ export default function AnalysisPage() {
 
       <div className="mb-4 flex gap-2 text-xs">
         {(["all", "increases", "critical", "pack_changed"] as const).map((f) => (
-          <button key={f} onClick={() => setFilter(f)} className={`rounded border px-3 py-1 ${filter === f ? "bg-slate-900 text-white" : ""}`}>
+          <button key={f} onClick={() => setFilter(f)} className={`rounded border px-3 py-1 ${filter === f ? "border-indigo-600 bg-indigo-600 text-white" : "hover:bg-[color:var(--app-surface-light-strong)]"}`}>
             {f}
           </button>
         ))}

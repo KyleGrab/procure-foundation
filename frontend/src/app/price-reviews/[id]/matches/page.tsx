@@ -38,7 +38,7 @@ export default function MatchesPage() {
       <p className="mb-6 text-sm text-slate-600">{lines.length} item(s) need a decision before analysis.</p>
       <div className="flex flex-col gap-4">
         {lines.map((line) => (
-          <div key={line.public_id} className="rounded border border-slate-300 p-4">
+          <div key={line.public_id} className="rounded border p-4">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="font-medium">Previous</p>
@@ -55,16 +55,16 @@ export default function MatchesPage() {
               Confidence: {line.match_confidence ? (Number(line.match_confidence) * 100).toFixed(0) : "?"}%
             </p>
             <div className="mt-3 flex gap-2">
-              <button onClick={() => decide(line.public_id, "confirm")} className="rounded bg-slate-900 px-3 py-1.5 text-xs text-white">
+              <button onClick={() => decide(line.public_id, "confirm")} className="rounded bg-indigo-500 px-3 py-1.5 text-xs text-white hover:bg-indigo-600">
                 Confirm Match
               </button>
-              <button onClick={() => decide(line.public_id, "mark_new")} className="rounded border px-3 py-1.5 text-xs">
+              <button onClick={() => decide(line.public_id, "mark_new")} className="rounded border px-3 py-1.5 text-xs hover:bg-[color:var(--app-surface-light-strong)]">
                 Mark as New Product
               </button>
-              <button onClick={() => decide(line.public_id, "mark_discontinued")} className="rounded border px-3 py-1.5 text-xs">
+              <button onClick={() => decide(line.public_id, "mark_discontinued")} className="rounded border px-3 py-1.5 text-xs hover:bg-[color:var(--app-surface-light-strong)]">
                 Mark as Discontinued
               </button>
-              <button onClick={() => decide(line.public_id, "ignore")} className="rounded border px-3 py-1.5 text-xs text-slate-500">
+              <button onClick={() => decide(line.public_id, "ignore")} className="rounded border px-3 py-1.5 text-xs text-slate-500 hover:bg-[color:var(--app-surface-light-strong)]">
                 Ignore
               </button>
             </div>

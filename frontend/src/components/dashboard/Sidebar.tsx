@@ -4,10 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, TrendingUp, FileSearch, FileText, Target, Sparkles, Settings, Network, X,
+  ShoppingCart,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
+  // Same icon as the Procurement lens card on the /welcome gateway (HomeGateway.tsx's LENSES) -
+  // one consistent visual identity for "Procurement" across the app, not a second one invented
+  // for this nav item.
+  { label: "Procurement", href: "/dashboard/procurement", icon: ShoppingCart },
   { label: "Spend Analytics", href: "/dashboard/spend-analytics", icon: TrendingUp },
   { label: "Price Reviews", href: "/price-reviews", icon: FileSearch },
   { label: "Contracts", href: "/dashboard/contracts", icon: FileText },

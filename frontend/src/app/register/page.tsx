@@ -5,6 +5,14 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import type { TokenPair } from "@/types/auth";
 
+// PROCUREIQ-APP-BACKGROUND-R1: this page previously had no dark styling at all - a plain
+// text-slate-300-implied heading and light border-slate-300 inputs, relying entirely on the root
+// layout's old bg-slate-50 default to stay legible. Now that the shared root background is dark
+// by default (app/layout.tsx), those unstyled elements would have rendered dark-on-dark. Given
+// the exact same dark-card treatment login/page.tsx already uses (same input classes, same
+// heading color, same button) - "user-credentials" per this feature's brief plainly includes
+// registration, and reusing login's own styling exactly avoids inventing a second, slightly
+// different dark theme for what is functionally the same kind of page.
 export default function RegisterPage() {
   const router = useRouter();
   const [form, setForm] = useState({
@@ -42,46 +50,48 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="mx-auto mt-16 max-w-sm">
-      <h1 className="mb-6 text-xl font-semibold">Register your organisation</h1>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <input
-          className="rounded border border-slate-300 px-3 py-2"
-          placeholder="First name"
-          onChange={(e) => update("first_name", e.target.value)}
-          required
-        />
-        <input
-          className="rounded border border-slate-300 px-3 py-2"
-          placeholder="Last name"
-          onChange={(e) => update("last_name", e.target.value)}
-          required
-        />
-        <input
-          className="rounded border border-slate-300 px-3 py-2"
-          type="email"
-          placeholder="Work email"
-          onChange={(e) => update("email", e.target.value)}
-          required
-        />
-        <input
-          className="rounded border border-slate-300 px-3 py-2"
-          type="password"
-          placeholder="Password (min 12 characters)"
-          onChange={(e) => update("password", e.target.value)}
-          required
-        />
-        <input
-          className="rounded border border-slate-300 px-3 py-2"
-          placeholder="Organisation name"
-          onChange={(e) => update("organisation_name", e.target.value)}
-          required
-        />
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button className="rounded bg-slate-900 px-4 py-2 text-white" type="submit">
-          Create account
-        </button>
-      </form>
+    <main className="min-h-screen px-6 py-24">
+      <div className="mx-auto max-w-sm">
+        <h1 className="mb-6 text-xl font-semibold text-white">Register your organisation</h1>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <input
+            className="rounded border border-[#1F2438] bg-[#131625] px-3 py-2 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none"
+            placeholder="First name"
+            onChange={(e) => update("first_name", e.target.value)}
+            required
+          />
+          <input
+            className="rounded border border-[#1F2438] bg-[#131625] px-3 py-2 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none"
+            placeholder="Last name"
+            onChange={(e) => update("last_name", e.target.value)}
+            required
+          />
+          <input
+            className="rounded border border-[#1F2438] bg-[#131625] px-3 py-2 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none"
+            type="email"
+            placeholder="Work email"
+            onChange={(e) => update("email", e.target.value)}
+            required
+          />
+          <input
+            className="rounded border border-[#1F2438] bg-[#131625] px-3 py-2 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none"
+            type="password"
+            placeholder="Password (min 12 characters)"
+            onChange={(e) => update("password", e.target.value)}
+            required
+          />
+          <input
+            className="rounded border border-[#1F2438] bg-[#131625] px-3 py-2 text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none"
+            placeholder="Organisation name"
+            onChange={(e) => update("organisation_name", e.target.value)}
+            required
+          />
+          {error && <p className="text-sm text-rose-400">{error}</p>}
+          <button className="rounded bg-indigo-500 px-4 py-2 text-white hover:bg-indigo-600" type="submit">
+            Create account
+          </button>
+        </form>
+      </div>
     </main>
   );
 }
